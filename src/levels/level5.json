@@ -1,0 +1,111 @@
+{
+  "id": 5,
+  "name": "The Gauntlet",
+  "subtitle": "Combine every skill to conquer the final course",
+  "width": 4200,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 80, "y": 384 },
+  "portal": { "x": 4100, "y": 344, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 440, "width": 860, "height": 120 },
+    { "x": 1100, "y": 440, "width": 580, "height": 120 },
+    { "x": 1220, "y": 310, "width": 150, "height": 130 },
+    { "x": 1410, "y": 130, "width": 60, "height": 30 },
+    { "x": 1510, "y": 250, "width": 170, "height": 190 },
+    { "x": 1860, "y": 440, "width": 740, "height": 120 },
+    { "x": 2000, "y": 260, "width": 190, "height": 140 },
+    { "x": 2380, "y": 280, "width": 170, "height": 120 },
+    { "x": 2780, "y": 380, "width": 170, "height": 28 },
+    { "x": 2835, "y": 180, "width": 60, "height": 30 },
+    { "x": 3140, "y": 320, "width": 180, "height": 28 },
+    { "x": 3200, "y": 120, "width": 60, "height": 30 },
+    { "x": 3520, "y": 440, "width": 680, "height": 120 },
+    { "x": 3980, "y": 240, "width": 60, "height": 30 }
+  ],
+  "spikes": [
+    { "x": 320, "y": 420, "width": 48, "height": 20, "direction": "up" },
+    { "x": 730, "y": 420, "width": 48, "height": 20, "direction": "up" },
+    { "x": 2000, "y": 240, "width": 190, "height": 20, "direction": "up" },
+    { "x": 2270, "y": 420, "width": 44, "height": 20, "direction": "up" },
+    { "x": 2380, "y": 260, "width": 170, "height": 20, "direction": "up" }
+  ],
+  "lasers": [
+    {
+      "x1": 470,
+      "y1": 398,
+      "x2": 630,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 1440,
+      "y1": 160,
+      "x2": 1440,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 1.0,
+      "phaseOffset": 0.2,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 2865,
+      "y1": 210,
+      "x2": 2865,
+      "y2": 378,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 0.0,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 3230,
+      "y1": 150,
+      "x2": 3230,
+      "y2": 318,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 0.85,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 3630,
+      "y1": 420,
+      "x2": 3710,
+      "y2": 420,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 3800,
+      "y1": 398,
+      "x2": 3940,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 4010,
+      "y1": 270,
+      "x2": 4010,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.4,
+      "activeDuration": 0.9,
+      "phaseOffset": 0.5,
+      "warningDuration": 0.45
+    }
+  ],
+  "hints": [
+    { "x": 140, "y": 310, "text": "FINAL STAGE — GIVE IT EVERYTHING!" },
+    { "x": 4020, "y": 215, "text": "VICTORY AWAITS" }
+  ]
+}

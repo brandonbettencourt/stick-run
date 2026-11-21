@@ -1,0 +1,112 @@
+{
+  "id": 4,
+  "name": "Laser Grid",
+  "subtitle": "Slide under beams, leap over emitters, and time the pulse gates",
+  "width": 3300,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 80, "y": 384 },
+  "portal": { "x": 3190, "y": 344, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 440, "width": 1180, "height": 120 },
+    { "x": 990, "y": 240, "width": 60, "height": 30 },
+    { "x": 1360, "y": 440, "width": 780, "height": 120 },
+    { "x": 1480, "y": 240, "width": 540, "height": 30 },
+    { "x": 2340, "y": 380, "width": 380, "height": 180 },
+    { "x": 2880, "y": 440, "width": 420, "height": 120 },
+    { "x": 3030, "y": 240, "width": 60, "height": 30 }
+  ],
+  "spikes": [
+    { "x": 1640, "y": 420, "width": 32, "height": 20, "direction": "up" }
+  ],
+  "lasers": [
+    {
+      "x1": 380,
+      "y1": 398,
+      "x2": 560,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 700,
+      "y1": 420,
+      "x2": 800,
+      "y2": 420,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 1020,
+      "y1": 270,
+      "x2": 1020,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.8,
+      "activeDuration": 1.1,
+      "phaseOffset": 0.0,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 1540,
+      "y1": 270,
+      "x2": 1540,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.8,
+      "activeDuration": 1.0,
+      "phaseOffset": 0.0,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 1740,
+      "y1": 270,
+      "x2": 1740,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.8,
+      "activeDuration": 1.0,
+      "phaseOffset": 0.7,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 1940,
+      "y1": 270,
+      "x2": 1940,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.8,
+      "activeDuration": 1.0,
+      "phaseOffset": 1.4,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 2450,
+      "y1": 338,
+      "x2": 2620,
+      "y2": 338,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 3060,
+      "y1": 270,
+      "x2": 3060,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 1.0,
+      "phaseOffset": 0.4,
+      "warningDuration": 0.45
+    }
+  ],
+  "hints": [
+    { "x": 270, "y": 310, "text": "SLIDE UNDER HIGH LASERS" },
+    { "x": 880, "y": 215, "text": "WAIT FOR THE FLICKER TO PASS" }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": 2,
+  "name": "Skyward Pulse",
+  "subtitle": "Use double jumps to cross wide chasms and scale tall blocks",
+  "width": 2800,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 80, "y": 384 },
+  "portal": { "x": 2680, "y": 344, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 440, "width": 420, "height": 120 },
+    { "x": 660, "y": 440, "width": 360, "height": 120 },
+    { "x": 840, "y": 300, "width": 180, "height": 140 },
+    { "x": 1150, "y": 230, "width": 170, "height": 28 },
+    { "x": 1460, "y": 280, "width": 220, "height": 28 },
+    { "x": 1920, "y": 360, "width": 360, "height": 200 },
+    { "x": 2080, "y": 215, "width": 200, "height": 145 },
+    { "x": 2480, "y": 440, "width": 320, "height": 120 }
+  ],
+  "spikes": [
+    { "x": 1550, "y": 260, "width": 40, "height": 20, "direction": "up" },
+    { "x": 1995, "y": 340, "width": 40, "height": 20, "direction": "up" },
+    { "x": 2575, "y": 420, "width": 40, "height": 20, "direction": "up" }
+  ],
+  "lasers": [],
+  "hints": [
+    { "x": 180, "y": 300, "text": "TAP JUMP AGAIN IN MID-AIR TO DOUBLE JUMP" },
+    { "x": 700, "y": 250, "text": "DOUBLE JUMP TO SCALE HIGH WALLS" }
+  ]
+}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0f1a'/%3E%3Ccircle cx='16' cy='8' r='3.5' fill='none' stroke='%2322d3ee' stroke-width='2.4'/%3E%3Cpath d='M16 12v8m0-6l6 3m-6-3l-6 3m6 3l5 7m-5-7l-5 7' fill='none' stroke='%2322d3ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <title>STICK RUN — Neon Platformer</title>
+  </head>
+  <body>
+    <main class="game-shell">
+      <div class="stage-frame">
+        <header class="hud" aria-label="Game status">
+          <div class="hud-group hud-left">
+            <span id="hud-level" class="hud-badge">LVL 1/5</span>
+            <span id="hud-level-name" class="hud-title">NEON AWAKENING</span>
+          </div>
+          <div class="hud-group hud-right">
+            <div class="hud-stat">
+              <span class="hud-label">LVL DEATHS</span>
+              <span id="hud-level-deaths" class="hud-value">0</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">TOTAL</span>
+              <span id="hud-total-deaths" class="hud-value">0</span>
+            </div>
+            <span class="hud-hint" aria-hidden="true">RESTART [R]</span>
+            <button
+              id="hud-mute-btn"
+              class="hud-mute"
+              type="button"
+              aria-pressed="false"
+            >
+              SFX ON [M]
+            </button>
+          </div>
+        </header>
+
+        <canvas
+          id="game-canvas"
+          width="960"
+          height="540"
+          aria-label="Stick Run game canvas"
+        ></canvas>
+
+        <div
+          id="level-complete-banner"
+          class="level-complete-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <p id="lc-title" class="lc-title">LEVEL 1 COMPLETE</p>
+          <p id="lc-subtitle" class="lc-subtitle">Neon Awakening — 0 deaths</p>
+          <p class="lc-next">Loading next course...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Title Overlay (native modal dialog) -->
+    <dialog
+      id="title-dialog"
+      class="neon-dialog"
+      closedby="none"
+      aria-labelledby="title-dialog-heading"
+    >
+      <div class="dialog-inner">
+        <p class="eyebrow">NEON PLATFORMER</p>
+        <h2 id="title-dialog-heading" class="dialog-logo">STICK RUN</h2>
+        <p class="dialog-subtitle">
+          Sprint, double-jump, and slide through 5 neon obstacle courses to reach
+          the glowing portal.
+        </p>
+
+        <dl class="controls-grid">
+          <div class="control-item">
+            <dt><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></dt>
+            <dd>Run</dd>
+          </div>
+          <div class="control-item">
+            <dt><kbd>SPACE</kbd> / <kbd>W</kbd> / <kbd>↑</kbd></dt>
+            <dd>Jump &amp; Double Jump</dd>
+          </div>
+          <div class="control-item">
+            <dt><kbd>S</kbd> / <kbd>↓</kbd></dt>
+            <dd>Duck / Slide (while running)</dd>
+          </div>
+          <div class="control-item">
+            <dt><kbd>R</kbd> &nbsp;/&nbsp; <kbd>M</kbd></dt>
+            <dd>Quick Restart / Mute Audio</dd>
+          </div>
+        </dl>
+
+        <button id="start-btn" class="neon-btn" type="button" autofocus>
+          START RUN
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Victory Overlay (native modal dialog) -->
+    <dialog
+      id="victory-dialog"
+      class="neon-dialog neon-dialog--victory"
+      closedby="none"
+      aria-labelledby="victory-dialog-heading"
+    >
+      <div class="dialog-inner">
+        <p class="eyebrow eyebrow--victory">ALL 5 LEVELS CLEARED</p>
+        <h2 id="victory-dialog-heading" class="dialog-logo dialog-logo--victory">
+          VICTORY!
+        </h2>
+
+        <div class="victory-total">
+          <span class="victory-total-label">TOTAL DEATHS</span>
+          <span id="victory-total-deaths" class="victory-total-value">0</span>
+        </div>
+
+        <ul id="victory-breakdown" class="breakdown-list"></ul>
+
+        <button id="play-again-btn" class="neon-btn neon-btn--victory" type="button" autofocus>
+          PLAY AGAIN
+        </button>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
