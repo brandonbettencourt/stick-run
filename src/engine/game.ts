@@ -1,10 +1,11 @@
 import type { LevelData } from '../levels/types.ts';
-import { LEVELS, getLevelByNumber, getLevelCount } from '../levels/index.ts';
+import { LevelPlaylistStore, cloneLevelData } from '../levels/store.ts';
 import { AudioManager } from './audio.ts';
 import { Camera } from './camera.ts';
 import {
   DEATH_DURATION,
   LEVEL_COMPLETE_DURATION,
+  PLAYER_WIDTH,
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
 } from './constants.ts';
@@ -17,8 +18,14 @@ import { checkHazardCollision } from '../entities/hazards.ts';
 import { checkPortalCollision } from '../entities/portal.ts';
 import { HudController } from '../ui/hud.ts';
 import { OverlayController } from '../ui/overlays.ts';
+import { LevelEditor } from '../ui/editor.ts';
 
-export type GameScreen = 'title' | 'playing' | 'levelComplete' | 'victory';
+export type GameScreen =
+  | 'title'
+  | 'playing'
+  | 'levelComplete'
+  | 'victory'
+  | 'editor';
 
 export interface GameDebugHook {
   readonly screen: GameScreen;
@@ -29,6 +36,7 @@ export interface GameDebugHook {
   readonly levelDeaths: number;
   readonly totalDeaths: number;
   readonly deathsByLevel: readonly number[];
+  readonly progressPercent: number;
   readonly muted: boolean;
   readonly player: PlayerSnapshot;
   readonly level: {
@@ -47,6 +55,7 @@ export interface GameDebugHook {
   };
   loadLevel: (levelNumber: number) => void;
   startGame: () => void;
+  openEditor: (levelNumber?: number) => void;
 }
 
 declare global {
@@ -57,6 +66,7 @@ declare global {
 
 export class Game {
   private readonly ctx: CanvasRenderingContext2D;
+  private readonly store: LevelPlaylistStore;
   private readonly input: InputManager;
   private readonly audio: AudioManager;
   private readonly camera: Camera;
@@ -65,11 +75,13 @@ export class Game {
   private readonly player: Player;
   private readonly hud: HudController;
   private readonly overlays: OverlayController;
+  private readonly editor: LevelEditor;
   private readonly loop: GameLoop;
 
   private screen: GameScreen = 'title';
   private currentLevelIndex = 0;
-  private currentLevel: LevelData = LEVELS[0];
+  private currentLevel: LevelData;
+  private isTestPlay = false;
   private levelTime = 0;
 
   private deathTimer = 0;
@@ -77,7 +89,7 @@ export class Game {
 
   private levelDeaths = 0;
   private totalDeaths = 0;
-  private deathsByLevel: number[] = LEVELS.map(() => 0);
+  private deathsByLevel: number[] = [];
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
@@ -86,6 +98,10 @@ export class Game {
     }
     this.ctx = context;
 
+    this.store = new LevelPlaylistStore();
+    this.currentLevel = this.store.getByIndex(0);
+    this.deathsByLevel = this.store.getLevels().map(() => 0);
+
     this.input = new InputManager();
     this.audio = new AudioManager();
     this.camera = new Camera();
@@ -93,14 +109,48 @@ export class Game {
     this.renderer = new SceneRenderer();
     this.player = new Player();
 
-    this.hud = new HudController(() => {
-      this.audio.toggleMute();
-      this.syncHud();
+    this.hud = new HudController({
+      onToggleMute: () => {
+        this.audio.toggleMute();
+        this.syncHud();
+      },
+      onOpenEditor: () => this.openEditor(this.currentLevelIndex),
+      onReturnToEditor: () => this.returnToEditorFromTestPlay(),
     });
 
     this.overlays = new OverlayController({
-      onStart: () => this.startNewRun(),
-      onPlayAgain: () => this.startNewRun(),
+      onStart: (startIndex) => this.startNewRun(startIndex),
+      onPlayAgain: () => this.startNewRun(0),
+      onOpenEditor: () => this.openEditor(this.currentLevelIndex),
+    });
+
+    this.editor = new LevelEditor(this.store, {
+      onCloseToGame: (levelIndex) => {
+        this.isTestPlay = false;
+        const idx = Math.max(
+          0,
+          Math.min(this.store.getCount() - 1, levelIndex ?? this.currentLevelIndex)
+        );
+        this.deathsByLevel = this.store.getLevels().map((_, i) => this.deathsByLevel[i] ?? 0);
+        this.loadLevelInternal(idx, true);
+        this.screen = 'playing';
+        this.syncHud();
+      },
+      onTestPlay: (draftLevel) => {
+        this.startTestPlay(draftLevel);
+      },
+    });
+
+    this.store.onChange(() => {
+      this.overlays.syncPlaylist(this.store.getLevels());
+      this.deathsByLevel = this.store.getLevels().map((_, i) => this.deathsByLevel[i] ?? 0);
+      if (this.currentLevelIndex >= this.store.getCount()) {
+        this.currentLevelIndex = Math.max(0, this.store.getCount() - 1);
+      }
+      if (!this.isTestPlay) {
+        this.currentLevel = this.store.getByIndex(this.currentLevelIndex);
+      }
+      this.syncHud();
     });
 
     this.audio.onMuteChange(() => this.syncHud());
@@ -108,9 +158,17 @@ export class Game {
     this.setupCanvasResolution();
     window.addEventListener('resize', () => this.setupCanvasResolution());
 
+    // Escape returns to editor during Test Play
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && this.isTestPlay && this.screen === 'playing') {
+        e.preventDefault();
+        this.returnToEditorFromTestPlay();
+      }
+    });
+
     this.loadLevelInternal(0, false);
     this.screen = 'title';
-    this.overlays.showTitle();
+    this.overlays.showTitle(this.store.getLevels());
     this.syncHud();
     this.installDebugHook();
 
@@ -128,28 +186,73 @@ export class Game {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  startNewRun(): void {
+  startNewRun(startLevelIndex = 0): void {
+    this.isTestPlay = false;
     this.totalDeaths = 0;
     this.levelDeaths = 0;
-    this.deathsByLevel = LEVELS.map(() => 0);
+    this.deathsByLevel = this.store.getLevels().map(() => 0);
     this.overlays.closeAll();
-    this.loadLevelInternal(0, true);
+    this.editor.close();
+    const clamped = Math.max(
+      0,
+      Math.min(this.store.getCount() - 1, startLevelIndex)
+    );
+    this.loadLevelInternal(clamped, true);
     this.screen = 'playing';
     this.syncHud();
   }
 
   loadLevelByNumber(levelNumber: number): void {
-    const clamped = Math.max(1, Math.min(getLevelCount(), Math.floor(levelNumber)));
+    this.isTestPlay = false;
+    const clamped = Math.max(
+      1,
+      Math.min(this.store.getCount(), Math.floor(levelNumber))
+    );
     const targetIndex = clamped - 1;
     this.overlays.closeAll();
+    this.editor.close();
     this.loadLevelInternal(targetIndex, true);
     this.screen = 'playing';
     this.syncHud();
   }
 
+  openEditor(levelIndex?: number): void {
+    this.isTestPlay = false;
+    this.overlays.closeAll();
+    this.screen = 'editor';
+    this.editor.open(levelIndex);
+  }
+
+  private startTestPlay(draftLevel: LevelData): void {
+    this.isTestPlay = true;
+    this.overlays.closeAll();
+    this.currentLevel = cloneLevelData(draftLevel);
+    this.levelDeaths = 0;
+    this.levelTime = 0;
+    this.deathTimer = 0;
+    this.levelCompleteTimer = 0;
+    this.particles.clear();
+    this.input.clearEdges();
+
+    this.player.reset(this.currentLevel.spawn);
+    this.camera.configure(this.currentLevel.width, this.currentLevel.height);
+    const center = this.player.getCenter();
+    this.camera.snapTo(center.x, center.y, this.player.facing);
+
+    this.screen = 'playing';
+    this.syncHud();
+  }
+
+  private returnToEditorFromTestPlay(): void {
+    this.isTestPlay = false;
+    this.overlays.closeAll();
+    this.screen = 'editor';
+    this.editor.resumeDraft();
+  }
+
   private loadLevelInternal(index: number, resetLevelDeaths: boolean): void {
     this.currentLevelIndex = index;
-    this.currentLevel = getLevelByNumber(index + 1);
+    this.currentLevel = this.store.getByIndex(index);
     if (resetLevelDeaths) {
       this.levelDeaths = 0;
     }
@@ -173,6 +276,21 @@ export class Game {
     this.player.reset(this.currentLevel.spawn);
     const center = this.player.getCenter();
     this.camera.snapTo(center.x, center.y, this.player.facing);
+    this.hud.updateProgress(this.computeProgressPercent());
+  }
+
+  private computeProgressPercent(): number {
+    if (this.screen === 'levelComplete' || this.screen === 'victory') {
+      return 100;
+    }
+    const spawnCenter = this.currentLevel.spawn.x + PLAYER_WIDTH * 0.5;
+    const portalCenter =
+      this.currentLevel.portal.x + this.currentLevel.portal.width * 0.5;
+    const playerCenter = this.player.x + this.player.width * 0.5;
+    const span = portalCenter - spawnCenter;
+    if (Math.abs(span) < 1) return 0;
+    const ratio = (playerCenter - spawnCenter) / span;
+    return Math.max(0, Math.min(100, ratio * 100));
   }
 
   private triggerDeath(): void {
@@ -182,9 +300,11 @@ export class Game {
     this.deathTimer = DEATH_DURATION;
 
     this.levelDeaths += 1;
-    this.totalDeaths += 1;
-    this.deathsByLevel[this.currentLevelIndex] =
-      (this.deathsByLevel[this.currentLevelIndex] ?? 0) + 1;
+    if (!this.isTestPlay) {
+      this.totalDeaths += 1;
+      this.deathsByLevel[this.currentLevelIndex] =
+        (this.deathsByLevel[this.currentLevelIndex] ?? 0) + 1;
+    }
     this.syncHud();
   }
 
@@ -197,26 +317,42 @@ export class Game {
     );
     this.audio.playPortal();
     this.camera.shake(4, 0.18);
+    this.hud.updateProgress(100);
 
-    const isLastLevel = this.currentLevelIndex >= getLevelCount() - 1;
+    if (this.isTestPlay) {
+      this.screen = 'levelComplete';
+      this.levelCompleteTimer = LEVEL_COMPLETE_DURATION;
+      this.overlays.showLevelComplete(this.currentLevel, this.levelDeaths, true);
+      return;
+    }
+
+    const isLastLevel = this.currentLevelIndex >= this.store.getCount() - 1;
     if (isLastLevel) {
       this.screen = 'victory';
-      this.overlays.showVictory(LEVELS, this.deathsByLevel, this.totalDeaths);
+      this.overlays.showVictory(
+        this.store.getLevels(),
+        this.deathsByLevel,
+        this.totalDeaths
+      );
     } else {
       this.screen = 'levelComplete';
       this.levelCompleteTimer = LEVEL_COMPLETE_DURATION;
-      this.overlays.showLevelComplete(this.currentLevel, this.levelDeaths);
+      this.overlays.showLevelComplete(this.currentLevel, this.levelDeaths, false);
     }
   }
 
   private fixedUpdate(dt: number): void {
+    if (this.screen === 'editor') {
+      this.input.clearEdges();
+      return;
+    }
+
     const input = this.input.consumeTick();
 
     if (input.mutePressed) {
       this.audio.toggleMute();
     }
 
-    // Keep background portal & ambient animations gently alive on title/victory
     if (this.screen === 'title' || this.screen === 'victory') {
       this.levelTime += dt;
       this.particles.update(dt);
@@ -229,14 +365,17 @@ export class Game {
       this.levelCompleteTimer -= dt;
       if (this.levelCompleteTimer <= 0 || input.jumpPressed) {
         this.overlays.hideLevelComplete();
-        this.loadLevelInternal(this.currentLevelIndex + 1, true);
-        this.screen = 'playing';
-        this.syncHud();
+        if (this.isTestPlay) {
+          this.returnToEditorFromTestPlay();
+        } else {
+          this.loadLevelInternal(this.currentLevelIndex + 1, true);
+          this.screen = 'playing';
+          this.syncHud();
+        }
       }
       return;
     }
 
-    // Quick restart current level (`R`)
     if (input.restartPressed) {
       this.resetCurrentLevelAfterDeath();
       return;
@@ -265,13 +404,11 @@ export class Game {
 
     const playerRect = this.player.getRect();
 
-    // Check lethal pit threshold
     if (this.player.y > this.currentLevel.killY) {
       this.triggerDeath();
       return;
     }
 
-    // Check spikes & active lasers
     if (
       checkHazardCollision(
         playerRect,
@@ -284,7 +421,6 @@ export class Game {
       return;
     }
 
-    // Check portal goal
     if (checkPortalCollision(playerRect, this.currentLevel.portal)) {
       this.triggerLevelComplete();
       return;
@@ -292,9 +428,11 @@ export class Game {
 
     const center = this.player.getCenter();
     this.camera.update(center.x, center.y, this.player.facing, dt);
+    this.hud.updateProgress(this.computeProgressPercent());
   }
 
   private render(): void {
+    if (this.screen === 'editor') return;
     this.renderer.render(
       this.ctx,
       this.currentLevel,
@@ -307,18 +445,17 @@ export class Game {
 
   private syncHud(): void {
     this.hud.update({
-      levelId: this.currentLevel.id,
-      levelCount: getLevelCount(),
+      levelId: this.currentLevelIndex + 1,
+      levelCount: this.store.getCount(),
       levelName: this.currentLevel.name,
       levelDeaths: this.levelDeaths,
       totalDeaths: this.totalDeaths,
       muted: this.audio.isMuted(),
+      progressPercent: this.computeProgressPercent(),
+      isTestPlay: this.isTestPlay,
     });
   }
 
-  /**
-   * Expose lightweight read-only debug/test hook on `window.__GAME__` for Playwright E2E verification.
-   */
   private installDebugHook(): void {
     const game = this;
     const hook: GameDebugHook = {
@@ -335,7 +472,7 @@ export class Game {
         return game.currentLevel.name;
       },
       get levelCount() {
-        return getLevelCount();
+        return game.store.getCount();
       },
       get levelDeaths() {
         return game.levelDeaths;
@@ -345,6 +482,9 @@ export class Game {
       },
       get deathsByLevel() {
         return [...game.deathsByLevel];
+      },
+      get progressPercent() {
+        return Math.round(game.computeProgressPercent());
       },
       get muted() {
         return game.audio.isMuted();
@@ -368,7 +508,12 @@ export class Game {
         game.loadLevelByNumber(n);
       },
       startGame() {
-        game.startNewRun();
+        game.startNewRun(0);
+      },
+      openEditor(levelNumber?: number) {
+        game.openEditor(
+          levelNumber !== undefined ? Math.max(0, levelNumber - 1) : undefined
+        );
       },
     };
 

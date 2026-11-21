@@ -2,35 +2,46 @@ import type { LevelData } from '../levels/types.ts';
 
 export class OverlayController {
   private readonly titleDialog: HTMLDialogElement;
+  private readonly titleSubtitleEl: HTMLElement;
+  private readonly levelSelectEl: HTMLSelectElement;
   private readonly startBtn: HTMLButtonElement;
+  private readonly openEditorBtn: HTMLButtonElement;
 
   private readonly levelCompleteBanner: HTMLElement;
   private readonly lcTitleEl: HTMLElement;
   private readonly lcSubtitleEl: HTMLElement;
+  private readonly lcNextEl: HTMLElement;
 
   private readonly victoryDialog: HTMLDialogElement;
+  private readonly victoryEyebrowEl: HTMLElement;
   private readonly victoryTotalEl: HTMLElement;
   private readonly victoryBreakdownEl: HTMLElement;
   private readonly playAgainBtn: HTMLButtonElement;
+  private readonly victoryEditorBtn: HTMLButtonElement;
 
   constructor(callbacks: {
-    onStart: () => void;
+    onStart: (startLevelIndex: number) => void;
     onPlayAgain: () => void;
+    onOpenEditor: () => void;
   }) {
     this.titleDialog = this.mustGet('title-dialog') as HTMLDialogElement;
+    this.titleSubtitleEl = this.mustGet('title-subtitle');
+    this.levelSelectEl = this.mustGet('title-level-select') as HTMLSelectElement;
     this.startBtn = this.mustGet('start-btn') as HTMLButtonElement;
+    this.openEditorBtn = this.mustGet('title-editor-btn') as HTMLButtonElement;
 
     this.levelCompleteBanner = this.mustGet('level-complete-banner');
     this.lcTitleEl = this.mustGet('lc-title');
     this.lcSubtitleEl = this.mustGet('lc-subtitle');
+    this.lcNextEl = this.mustGet('lc-next');
 
     this.victoryDialog = this.mustGet('victory-dialog') as HTMLDialogElement;
+    this.victoryEyebrowEl = this.mustGet('victory-eyebrow');
     this.victoryTotalEl = this.mustGet('victory-total-deaths');
     this.victoryBreakdownEl = this.mustGet('victory-breakdown');
     this.playAgainBtn = this.mustGet('play-again-btn') as HTMLButtonElement;
+    this.victoryEditorBtn = this.mustGet('victory-editor-btn') as HTMLButtonElement;
 
-    // Prevent Escape from closing blocking Title/Victory modals without choosing an action
-    // (fallback guard for browsers that do not enforce closedby="none")
     this.titleDialog.addEventListener('cancel', (e) => {
       e.preventDefault();
     });
@@ -39,17 +50,47 @@ export class OverlayController {
     });
 
     this.startBtn.addEventListener('click', () => {
+      const startIndex = Math.max(0, Number(this.levelSelectEl.value) || 0);
       this.closeAll();
-      callbacks.onStart();
+      callbacks.onStart(startIndex);
+    });
+
+    this.openEditorBtn.addEventListener('click', () => {
+      this.closeAll();
+      callbacks.onOpenEditor();
     });
 
     this.playAgainBtn.addEventListener('click', () => {
       this.closeAll();
       callbacks.onPlayAgain();
     });
+
+    this.victoryEditorBtn.addEventListener('click', () => {
+      this.closeAll();
+      callbacks.onOpenEditor();
+    });
   }
 
-  showTitle(): void {
+  syncPlaylist(levels: readonly LevelData[]): void {
+    const prev = this.levelSelectEl.value;
+    this.levelSelectEl.replaceChildren();
+    levels.forEach((lvl, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = `Level ${idx + 1}: ${lvl.name}`;
+      this.levelSelectEl.append(opt);
+    });
+    if (prev && Number(prev) < levels.length) {
+      this.levelSelectEl.value = prev;
+    } else {
+      this.levelSelectEl.value = '0';
+    }
+
+    this.titleSubtitleEl.textContent = `Sprint, double-jump, and slide through ${levels.length} neon obstacle courses — or build your own in the Level Editor!`;
+  }
+
+  showTitle(levels: readonly LevelData[]): void {
+    this.syncPlaylist(levels);
     this.hideLevelComplete();
     if (this.victoryDialog.open) this.victoryDialog.close();
     if (!this.titleDialog.open) {
@@ -58,9 +99,18 @@ export class OverlayController {
     }
   }
 
-  showLevelComplete(level: LevelData, levelDeaths: number): void {
-    this.lcTitleEl.textContent = `LEVEL ${level.id} COMPLETE`;
+  showLevelComplete(
+    level: LevelData,
+    levelDeaths: number,
+    isTestPlay = false
+  ): void {
+    this.lcTitleEl.textContent = isTestPlay
+      ? 'TEST RUN CLEARED!'
+      : `LEVEL ${level.id} COMPLETE`;
     this.lcSubtitleEl.textContent = `${level.name} — ${levelDeaths} ${levelDeaths === 1 ? 'death' : 'deaths'}`;
+    this.lcNextEl.textContent = isTestPlay
+      ? 'Returning to Level Editor...'
+      : 'Loading next course...';
     this.levelCompleteBanner.hidden = false;
   }
 
@@ -76,6 +126,7 @@ export class OverlayController {
     this.hideLevelComplete();
     if (this.titleDialog.open) this.titleDialog.close();
 
+    this.victoryEyebrowEl.textContent = `ALL ${levels.length} LEVELS CLEARED`;
     this.victoryTotalEl.textContent = String(totalDeaths);
     this.victoryBreakdownEl.replaceChildren();
 
@@ -85,7 +136,7 @@ export class OverlayController {
 
       const nameSpan = document.createElement('span');
       nameSpan.className = 'breakdown-name';
-      nameSpan.textContent = `Level ${lvl.id}: ${lvl.name}`;
+      nameSpan.textContent = `Level ${idx + 1}: ${lvl.name}`;
 
       const countSpan = document.createElement('span');
       countSpan.className = 'breakdown-count';

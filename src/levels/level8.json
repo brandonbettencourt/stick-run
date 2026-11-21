@@ -1,0 +1,141 @@
+{
+  "id": 8,
+  "name": "Pulse Corridor",
+  "subtitle": "Ride the rhythm of alternating static and wave lasers",
+  "width": 4000,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 80, "y": 384 },
+  "portal": { "x": 3900, "y": 344, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 440, "width": 1240, "height": 120 },
+    { "x": 1440, "y": 440, "width": 960, "height": 120 },
+    { "x": 1520, "y": 240, "width": 800, "height": 30 },
+    { "x": 2620, "y": 370, "width": 620, "height": 190 },
+    { "x": 2750, "y": 210, "width": 170, "height": 120 },
+    { "x": 3040, "y": 170, "width": 60, "height": 30 },
+    { "x": 3440, "y": 440, "width": 560, "height": 120 },
+    { "x": 3780, "y": 240, "width": 60, "height": 30 }
+  ],
+  "spikes": [
+    { "x": 2750, "y": 190, "width": 170, "height": 20, "direction": "up" }
+  ],
+  "lasers": [
+    {
+      "x1": 300,
+      "y1": 398,
+      "x2": 440,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 560,
+      "y1": 420,
+      "x2": 640,
+      "y2": 420,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 770,
+      "y1": 398,
+      "x2": 920,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 1040,
+      "y1": 420,
+      "x2": 1120,
+      "y2": 420,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 1580,
+      "y1": 270,
+      "x2": 1580,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 0.0,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 1790,
+      "y1": 270,
+      "x2": 1790,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 0.55,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 2000,
+      "y1": 270,
+      "x2": 2000,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 1.1,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 2210,
+      "y1": 270,
+      "x2": 2210,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.6,
+      "activeDuration": 0.95,
+      "phaseOffset": 1.65,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 3070,
+      "y1": 200,
+      "x2": 3070,
+      "y2": 368,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.4,
+      "activeDuration": 0.9,
+      "phaseOffset": 0.3,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 3570,
+      "y1": 398,
+      "x2": 3720,
+      "y2": 398,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 3810,
+      "y1": 270,
+      "x2": 3810,
+      "y2": 438,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.4,
+      "activeDuration": 0.9,
+      "phaseOffset": 0.9,
+      "warningDuration": 0.45
+    }
+  ],
+  "hints": [
+    { "x": 170, "y": 310, "text": "SLIDE — JUMP — SLIDE — JUMP!" },
+    { "x": 1520, "y": 210, "text": "FOLLOW THE LASER WAVE" }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "id": 9,
+  "name": "Neon Canyon",
+  "subtitle": "Leap across sweeping neon chasms and laser-guarded islands",
+  "width": 4400,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 80, "y": 384 },
+  "portal": { "x": 4290, "y": 344, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 440, "width": 540, "height": 120 },
+    { "x": 800, "y": 420, "width": 280, "height": 32 },
+    { "x": 1330, "y": 360, "width": 300, "height": 32 },
+    { "x": 1450, "y": 160, "width": 60, "height": 30 },
+    { "x": 1890, "y": 440, "width": 720, "height": 120 },
+    { "x": 2040, "y": 260, "width": 180, "height": 140 },
+    { "x": 2450, "y": 360, "width": 160, "height": 80 },
+    { "x": 2870, "y": 310, "width": 260, "height": 32 },
+    { "x": 3380, "y": 380, "width": 280, "height": 32 },
+    { "x": 3490, "y": 180, "width": 60, "height": 30 },
+    { "x": 3900, "y": 440, "width": 500, "height": 120 },
+    { "x": 4040, "y": 280, "width": 140, "height": 120 }
+  ],
+  "spikes": [
+    { "x": 320, "y": 420, "width": 44, "height": 20, "direction": "up" },
+    { "x": 2040, "y": 240, "width": 180, "height": 20, "direction": "up" },
+    { "x": 2300, "y": 420, "width": 44, "height": 20, "direction": "up" },
+    { "x": 2980, "y": 290, "width": 40, "height": 20, "direction": "up" },
+    { "x": 4040, "y": 260, "width": 140, "height": 20, "direction": "up" }
+  ],
+  "lasers": [
+    {
+      "x1": 860,
+      "y1": 378,
+      "x2": 1010,
+      "y2": 378,
+      "thickness": 8,
+      "timed": false
+    },
+    {
+      "x1": 1480,
+      "y1": 190,
+      "x2": 1480,
+      "y2": 358,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.5,
+      "activeDuration": 0.95,
+      "phaseOffset": 0.1,
+      "warningDuration": 0.45
+    },
+    {
+      "x1": 3520,
+      "y1": 210,
+      "x2": 3520,
+      "y2": 378,
+      "thickness": 8,
+      "timed": true,
+      "cyclePeriod": 2.4,
+      "activeDuration": 0.9,
+      "phaseOffset": 0.5,
+      "warningDuration": 0.45
+    }
+  ],
+  "hints": [
+    { "x": 140, "y": 300, "text": "LONG CHASMS — SAVE YOUR DOUBLE JUMP!" }
+  ]
+}

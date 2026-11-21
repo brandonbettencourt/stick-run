@@ -1,17 +1,28 @@
 # Stick Run — Level Authoring Guide
 
-Levels are stored as plain, human-readable JSON files in `src/levels/` (`level1.json` through `level5.json`) and registered in [`src/levels/index.ts`](./index.ts).
+Stick Run ships with **10 built-in handcrafted levels** (`level1.json` through `level10.json` in `src/levels/`) **plus a built-in Visual Level Editor** right in the browser!
 
-## Coordinate System
+## Using the Visual Level Editor (No Code Required)
 
-- **Origin `(0, 0)`** is the top-left corner of the level.
-- **`x` increases to the right**; **`y` increases downward**.
-- The logical game viewport is **`960 × 540` px** (16:9).
-- Standard ground top sits at **`y = 440`** (with `height: 120` extending below the viewport), and `killY` defaults to **`620`**.
+Click **LEVEL EDITOR** on the title screen (or **EDITOR** in the top HUD at any time):
 
-## Player Dimensions & Reach Reference
+1. **Create or Edit:** Click **+ NEW BLANK** for a clean starter course (ground + spawn + portal), or open the **Playlist Order** tab and click any existing level to edit/remix it.
+2. **Add Components:** Pick a tool from the left palette (`Platform / Block`, `Spikes`, `Static Laser`, `Timed Laser`, `Move Spawn`, `Move Portal`, or `Hint Text`) and click or click-and-drag directly on the canvas.
+3. **Move & Resize:** Switch to **Select / Move / Resize (`V`)** to drag any object around, drag the **8 corner/edge handles** to resize platforms/overhangs/spikes, or drag the circular endpoints to stretch/rotate laser beams.
+4. **Live Playability Check & Test Play:** The bottom status bar validates spawn safety and double-jump reachability in real time. Click **▶ TEST PLAY** to immediately playtest your draft, then click **← EDITOR [ESC]** to tweak it.
+5. **Tack On or Insert Anywhere in the Campaign:**
+   - Choose a slot from the insert dropdown (e.g., **At End (as Level 11)** or **Between Level 4 & Level 5**) and click **+ INSERT**.
+   - Use the **↑ / ↓** buttons in the **Playlist Order** tab to reorder any level at any time.
+   - Custom levels and playlist order are saved automatically in your browser (`localStorage`).
+6. **Promote a Favorite Custom Level to GitHub:** Click **EXPORT JSON** to download the `.json` file, drop it into `src/levels/`, register it in [`src/levels/index.ts`](./index.ts), and push to `main`!
 
-Keep these physics values in mind when placing gaps, blocks, overhangs, and lasers (source of truth: `src/engine/constants.ts`):
+---
+
+## Coordinate System & Reach Reference
+
+- **Origin `(0, 0)`** is the top-left corner (`x` right, `y` down).
+- Logical viewport: **`960 × 540` px** (standard ground top at `y = 440`, `killY = 620`).
+- Physics source of truth: [`src/engine/constants.ts`](../engine/constants.ts).
 
 | Metric | Value | Level Design Guideline |
 | --- | --- | --- |
@@ -22,74 +33,9 @@ Keep these physics values in mind when placing gaps, blocks, overhangs, and lase
 | Max single jump flat gap | ~`226` px | Keep easy pits `110–160` px wide |
 | Max double jump flat gap | ~`380+` px | Keep double-jump pits `180–260` px wide |
 
-## JSON Schema
-
-```json
-{
-  "id": 1,
-  "name": "Neon Awakening",
-  "subtitle": "Short description shown on the HUD/overlay",
-  "width": 2400,
-  "height": 540,
-  "killY": 620,
-  "spawn": { "x": 80, "y": 384 },
-  "portal": { "x": 2260, "y": 344, "width": 44, "height": 96 },
-  "solids": [
-    { "x": 0, "y": 440, "width": 680, "height": 120 }
-  ],
-  "spikes": [
-    { "x": 540, "y": 420, "width": 48, "height": 20, "direction": "up" }
-  ],
-  "lasers": [
-    {
-      "x1": 1020,
-      "y1": 270,
-      "x2": 1020,
-      "y2": 438,
-      "thickness": 8,
-      "timed": true,
-      "cyclePeriod": 2.8,
-      "activeDuration": 1.1,
-      "phaseOffset": 0.0,
-      "warningDuration": 0.45
-    }
-  ],
-  "hints": [
-    { "x": 100, "y": 310, "text": "SPACE to Jump" }
-  ]
-}
-```
-
-### Field Reference
-
-- **`id`**: Sequential integer (`1`, `2`, `3`, ...).
-- **`name` / `subtitle`**: Displayed in the HUD and transition overlays.
-- **`width` / `height`**: World bounds in pixels (`width >= 960`, `height >= 540`).
-- **`killY`**: Falling below this `y` coordinate kills the player instantly.
-- **`spawn`**: `{ x, y }` top-left corner of the standing player hitbox (`24 × 56`). Must rest on or just above a solid surface and never overlap a solid or hazard.
-- **`portal`**: `{ x, y, width, height }` exit goal rectangle. Standard size is `44 × 96` resting on the floor (`y = floorY - 96`).
-- **`solids`**: Array of `{ x, y, width, height }` non-lethal platforms, walls, blocks, and overhangs.
-- **`spikes`**: Array of `{ x, y, width, height, direction }` where `direction` is `"up" | "down" | "left" | "right"`.
-- **`lasers`**: Array of beams between `(x1, y1)` and `(x2, y2)`:
-  - `thickness` (optional, default `8`): Lethal beam width in px.
-  - `timed`: `false` for static beams (always active), `true` for pulsing beams.
-  - `cyclePeriod`: Total cycle length in seconds (e.g., `2.8`).
-  - `activeDuration`: Seconds the beam is lethal per cycle (`< cyclePeriod`).
-  - `warningDuration` (optional, default `0.45`): Telegraph flicker window immediately before activation.
-  - `phaseOffset` (optional, default `0`): Time offset in seconds to stagger multiple lasers.
-- **`hints`** (optional): Floating holographic text cues rendered in the background.
-
-## Adding or Editing a Level
-
-1. Edit an existing `levelN.json` or create a new `level6.json` and import/export it in `src/levels/index.ts`.
-2. Run the automated level & physics validator to verify geometry, safety, and reachability:
+## Validation & E2E Testing
 
 ```bash
-npm run validate-levels
-```
-
-3. Run the E2E suite to confirm every level loads and renders cleanly:
-
-```bash
-npm run test:e2e
+npm run validate-levels   # Validates all built-in JSON levels against schema & jump physics
+npm run test:e2e          # Runs Playwright E2E playability & Level Editor tests
 ```
