@@ -1,3 +1,5 @@
+export type VirtualAction = 'left' | 'right' | 'jump' | 'down' | 'restart' | 'mute';
+
 export interface InputSnapshot {
   left: boolean;
   right: boolean;
@@ -23,6 +25,10 @@ export class InputManager {
   private readonly pressedQueue = new Set<string>();
   private readonly releasedQueue = new Set<string>();
 
+  private readonly virtualHeld = new Set<VirtualAction>();
+  private readonly virtualPressedQueue = new Set<VirtualAction>();
+  private readonly virtualReleasedQueue = new Set<VirtualAction>();
+
   private readonly onKeyDownBound: (e: KeyboardEvent) => void;
   private readonly onKeyUpBound: (e: KeyboardEvent) => void;
   private readonly onBlurBound: () => void;
@@ -41,6 +47,40 @@ export class InputManager {
     this.target.removeEventListener('keydown', this.onKeyDownBound);
     this.target.removeEventListener('keyup', this.onKeyUpBound);
     this.target.removeEventListener('blur', this.onBlurBound);
+  }
+
+  /**
+   * Press or release a virtual (touch/on-screen) control action.
+   * Feeds the same edge-triggered press/release queues as keyboard events.
+   */
+  setVirtualAction(action: VirtualAction, active: boolean): void {
+    if (active) {
+      if (!this.virtualHeld.has(action)) {
+        this.virtualPressedQueue.add(action);
+      }
+      this.virtualHeld.add(action);
+    } else {
+      if (this.virtualHeld.has(action)) {
+        this.virtualReleasedQueue.add(action);
+      }
+      this.virtualHeld.delete(action);
+    }
+  }
+
+  /**
+   * Fire a one-shot edge-triggered virtual action (e.g. Restart button tap).
+   */
+  triggerVirtualAction(action: VirtualAction): void {
+    this.virtualPressedQueue.add(action);
+  }
+
+  /**
+   * Release all currently held virtual actions (e.g. when hiding touch controls or changing screens).
+   */
+  clearVirtualInputs(): void {
+    this.virtualHeld.clear();
+    this.virtualPressedQueue.clear();
+    this.virtualReleasedQueue.clear();
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
@@ -70,6 +110,7 @@ export class InputManager {
     this.held.clear();
     this.pressedQueue.clear();
     this.releasedQueue.clear();
+    this.clearVirtualInputs();
   }
 
   private isAnyHeld(codes: readonly string[]): boolean {
@@ -105,19 +146,21 @@ export class InputManager {
     const muteCodes = ['KeyM'];
 
     const snapshot: InputSnapshot = {
-      left: this.isAnyHeld(leftCodes),
-      right: this.isAnyHeld(rightCodes),
-      jumpHeld: this.isAnyHeld(jumpCodes),
-      jumpPressed: this.isAnyPressed(jumpCodes),
-      jumpReleased: this.isAnyReleased(jumpCodes),
-      downHeld: this.isAnyHeld(downCodes),
-      downPressed: this.isAnyPressed(downCodes),
-      restartPressed: this.isAnyPressed(restartCodes),
-      mutePressed: this.isAnyPressed(muteCodes),
+      left: this.isAnyHeld(leftCodes) || this.virtualHeld.has('left'),
+      right: this.isAnyHeld(rightCodes) || this.virtualHeld.has('right'),
+      jumpHeld: this.isAnyHeld(jumpCodes) || this.virtualHeld.has('jump'),
+      jumpPressed: this.isAnyPressed(jumpCodes) || this.virtualPressedQueue.has('jump'),
+      jumpReleased: this.isAnyReleased(jumpCodes) || this.virtualReleasedQueue.has('jump'),
+      downHeld: this.isAnyHeld(downCodes) || this.virtualHeld.has('down'),
+      downPressed: this.isAnyPressed(downCodes) || this.virtualPressedQueue.has('down'),
+      restartPressed: this.isAnyPressed(restartCodes) || this.virtualPressedQueue.has('restart'),
+      mutePressed: this.isAnyPressed(muteCodes) || this.virtualPressedQueue.has('mute'),
     };
 
     this.pressedQueue.clear();
     this.releasedQueue.clear();
+    this.virtualPressedQueue.clear();
+    this.virtualReleasedQueue.clear();
     return snapshot;
   }
 
@@ -127,5 +170,7 @@ export class InputManager {
   clearEdges(): void {
     this.pressedQueue.clear();
     this.releasedQueue.clear();
+    this.virtualPressedQueue.clear();
+    this.virtualReleasedQueue.clear();
   }
 }

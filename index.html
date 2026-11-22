@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -73,6 +76,16 @@
                 <span id="hud-total-deaths" class="hud-value">0</span>
               </div>
               <button
+                id="hud-restart-btn"
+                class="hud-action-btn hud-icon-btn"
+                type="button"
+                aria-label="Restart level"
+                title="Restart level"
+                hidden
+              >
+                <span aria-hidden="true">↺</span>
+              </button>
+              <button
                 id="hud-editor-btn"
                 class="hud-action-btn"
                 type="button"
@@ -116,6 +129,75 @@
           <p id="lc-title" class="lc-title">LEVEL 1 COMPLETE</p>
           <p id="lc-subtitle" class="lc-subtitle">Neon Awakening — 0 deaths</p>
           <p id="lc-next" class="lc-next">Loading next course...</p>
+        </div>
+      </div>
+
+      <!-- Dual-thumb multi-touch controls (auto-shown on touch devices during gameplay) -->
+      <div
+        id="touch-controls"
+        class="touch-controls"
+        role="group"
+        aria-label="Touch game controls"
+        hidden
+      >
+        <div
+          id="touch-move-pad"
+          class="touch-pad touch-pad--move"
+          role="group"
+          aria-label="Movement controls"
+        >
+          <button
+            id="touch-left-btn"
+            class="touch-btn touch-btn--move"
+            type="button"
+            data-touch-dir="left"
+            aria-label="Move left"
+          >
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+              <path d="M15.5 5.5 9 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button
+            id="touch-right-btn"
+            class="touch-btn touch-btn--move"
+            type="button"
+            data-touch-dir="right"
+            aria-label="Move right"
+          >
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+              <path d="M8.5 5.5 15 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div
+          id="touch-action-pad"
+          class="touch-pad touch-pad--actions"
+          role="group"
+          aria-label="Action controls"
+        >
+          <button
+            id="touch-slide-btn"
+            class="touch-btn touch-btn--slide"
+            type="button"
+            aria-label="Duck or slide"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M5.5 9.5 12 16l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="touch-btn-label" aria-hidden="true">SLIDE</span>
+          </button>
+          <button
+            id="touch-jump-btn"
+            class="touch-btn touch-btn--jump"
+            type="button"
+            aria-label="Jump"
+          >
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+              <path d="M5.5 14.5 12 8l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="touch-btn-label" aria-hidden="true">JUMP</span>
+          </button>
         </div>
       </div>
     </main>

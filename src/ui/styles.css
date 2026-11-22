@@ -1076,6 +1076,222 @@ kbd {
   }
 }
 
+/* Dual-thumb multi-touch controls (auto-shown on touch devices during gameplay) */
+.touch-controls {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding:
+    12px
+    max(16px, env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.touch-controls[hidden] {
+  display: none;
+}
+
+.touch-pad {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-pad--move {
+  padding: 6px;
+  border-radius: 22px;
+  background: rgba(8, 12, 24, 0.34);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  backdrop-filter: blur(6px);
+}
+
+.touch-pad--actions {
+  gap: 14px;
+  padding: 4px;
+}
+
+.touch-btn {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(56, 189, 248, 0.55);
+  background: rgba(13, 18, 34, 0.68);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.42),
+    inset 0 0 14px rgba(34, 211, 238, 0.14);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: transform 60ms ease, background-color 80ms ease, border-color 80ms ease, box-shadow 80ms ease;
+}
+
+.touch-btn--move {
+  width: clamp(58px, 14vw, 72px);
+  height: clamp(58px, 14vw, 72px);
+  border-radius: 16px;
+}
+
+.touch-btn--slide {
+  width: clamp(58px, 14vw, 68px);
+  height: clamp(58px, 14vw, 68px);
+  border-color: rgba(250, 204, 21, 0.55);
+  color: var(--gold);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.42),
+    inset 0 0 14px rgba(250, 204, 21, 0.12);
+}
+
+.touch-btn--jump {
+  width: clamp(68px, 16vw, 80px);
+  height: clamp(68px, 16vw, 80px);
+  margin-bottom: 12px;
+  border-width: 2px;
+  border-color: rgba(34, 211, 238, 0.78);
+  background: rgba(13, 24, 44, 0.76);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.48),
+    0 0 18px rgba(34, 211, 238, 0.22),
+    inset 0 0 16px rgba(34, 211, 238, 0.2);
+}
+
+.touch-btn-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.touch-btn.is-pressed {
+  transform: scale(0.93);
+  border-color: #ffffff;
+  background: rgba(34, 211, 238, 0.34);
+  color: #ffffff;
+  box-shadow:
+    0 0 22px rgba(34, 211, 238, 0.65),
+    inset 0 0 18px rgba(255, 255, 255, 0.25);
+}
+
+.touch-btn--slide.is-pressed {
+  border-color: #ffffff;
+  background: rgba(250, 204, 21, 0.32);
+  color: #ffffff;
+  box-shadow:
+    0 0 22px rgba(250, 204, 21, 0.6),
+    inset 0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+.hud-icon-btn {
+  position: relative;
+  min-inline-size: 30px;
+  padding-inline: 8px;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Ensure touch HUD buttons meet WCAG 44x44px hit-area guidance on coarse pointers */
+@media (pointer: coarse) {
+  .hud-action-btn,
+  .hud-mute {
+    position: relative;
+    min-block-size: 32px;
+  }
+
+  .hud-action-btn::after,
+  .hud-mute::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+}
+
+/* Fit the 16:9 stage cleanly inside short landscape mobile viewports */
+@media (max-height: 520px) and (orientation: landscape) {
+  body {
+    padding:
+      max(4px, env(safe-area-inset-top, 0px))
+      max(8px, env(safe-area-inset-right, 0px))
+      max(4px, env(safe-area-inset-bottom, 0px))
+      max(8px, env(safe-area-inset-left, 0px));
+  }
+
+  .stage-frame {
+    width: min(100%, calc((100dvh - 12px) * 16 / 9));
+    max-height: calc(100dvh - 12px);
+  }
+
+  .touch-controls {
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .touch-btn--move {
+    width: 58px;
+    height: 58px;
+  }
+
+  .touch-btn--slide {
+    width: 58px;
+    height: 58px;
+  }
+
+  .touch-btn--jump {
+    width: 68px;
+    height: 68px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Portrait phones: dock touch controls in the open dark space below the 16:9 canvas */
+@media (orientation: portrait) and (max-width: 768px) {
+  body {
+    padding:
+      max(10px, env(safe-area-inset-top, 0px))
+      max(8px, env(safe-area-inset-right, 0px))
+      max(10px, env(safe-area-inset-bottom, 0px))
+      max(8px, env(safe-area-inset-left, 0px));
+  }
+
+  .game-shell {
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    min-height: calc(100dvh - 24px);
+  }
+
+  .touch-controls {
+    position: static;
+    width: 100%;
+    padding:
+      6px
+      max(6px, env(safe-area-inset-right, 0px))
+      max(8px, env(safe-area-inset-bottom, 0px))
+      max(6px, env(safe-area-inset-left, 0px));
+  }
+}
+
 @media (max-width: 900px) {
   .hud-title {
     display: none;
@@ -1089,5 +1305,40 @@ kbd {
 @media (max-width: 680px) {
   .controls-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hud {
+    padding: 6px 8px 10px;
+  }
+
+  .hud-row--top {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 6px;
+  }
+
+  .hud-group {
+    gap: 6px;
+  }
+
+  .hud-progress-wrap {
+    order: 3;
+    flex: 1 0 100%;
+    max-width: none;
+    padding: 3px 8px;
+  }
+
+  .hud-label {
+    font-size: 0.58rem;
+  }
+
+  .hud-value {
+    font-size: 0.78rem;
+  }
+
+  .hud-action-btn,
+  .hud-mute {
+    font-size: 0.64rem;
+    padding: 4px 7px;
   }
 }

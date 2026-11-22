@@ -19,6 +19,7 @@ import { checkPortalCollision } from '../entities/portal.ts';
 import { HudController } from '../ui/hud.ts';
 import { OverlayController } from '../ui/overlays.ts';
 import { LevelEditor } from '../ui/editor.ts';
+import { TouchControlsController } from '../ui/touch-controls.ts';
 
 export type GameScreen =
   | 'title'
@@ -40,6 +41,7 @@ export interface GameDebugHook {
   readonly muted: boolean;
   readonly musicUrl: string | null;
   readonly musicActive: boolean;
+  readonly touchControlsVisible: boolean;
   readonly player: PlayerSnapshot;
   readonly level: {
     readonly id: number;
@@ -78,6 +80,7 @@ export class Game {
   private readonly hud: HudController;
   private readonly overlays: OverlayController;
   private readonly editor: LevelEditor;
+  private readonly touchControls: TouchControlsController;
   private readonly loop: GameLoop;
 
   private screen: GameScreen = 'title';
@@ -110,11 +113,17 @@ export class Game {
     this.particles = new ParticleSystem();
     this.renderer = new SceneRenderer();
     this.player = new Player();
+    this.touchControls = new TouchControlsController(this.input);
 
     this.hud = new HudController({
       onToggleMute: () => {
         this.audio.toggleMute();
         this.syncHud();
+      },
+      onRestart: () => {
+        if (this.screen === 'playing') {
+          this.resetCurrentLevelAfterDeath();
+        }
       },
       onOpenEditor: () => this.openEditor(this.currentLevelIndex),
       onReturnToEditor: () => this.returnToEditorFromTestPlay(),
@@ -135,7 +144,7 @@ export class Game {
         );
         this.deathsByLevel = this.store.getLevels().map((_, i) => this.deathsByLevel[i] ?? 0);
         this.loadLevelInternal(idx, true);
-        this.screen = 'playing';
+        this.setScreen('playing');
         this.audio.playMusic(GAME_MUSIC_URL);
         this.syncHud();
       },
@@ -157,6 +166,7 @@ export class Game {
     });
 
     this.audio.onMuteChange(() => this.syncHud());
+    this.touchControls.onTouchModeChange(() => this.syncHud());
 
     this.setupCanvasResolution();
     window.addEventListener('resize', () => this.setupCanvasResolution());
@@ -170,7 +180,7 @@ export class Game {
     });
 
     this.loadLevelInternal(0, false);
-    this.screen = 'title';
+    this.setScreen('title');
     this.overlays.showTitle(this.store.getLevels());
     this.syncHud();
     this.installDebugHook();
@@ -180,6 +190,13 @@ export class Game {
       () => this.render()
     );
     this.loop.start();
+  }
+
+  private setScreen(next: GameScreen): void {
+    this.screen = next;
+    this.touchControls.setGameplayActive(
+      next === 'playing' || next === 'levelComplete'
+    );
   }
 
   private setupCanvasResolution(): void {
@@ -201,7 +218,7 @@ export class Game {
       Math.min(this.store.getCount() - 1, startLevelIndex)
     );
     this.loadLevelInternal(clamped, true);
-    this.screen = 'playing';
+    this.setScreen('playing');
     this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
@@ -216,7 +233,7 @@ export class Game {
     this.overlays.closeAll();
     this.editor.close();
     this.loadLevelInternal(targetIndex, true);
-    this.screen = 'playing';
+    this.setScreen('playing');
     this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
@@ -225,7 +242,7 @@ export class Game {
     this.isTestPlay = false;
     this.overlays.closeAll();
     this.audio.pauseMusic();
-    this.screen = 'editor';
+    this.setScreen('editor');
     this.editor.open(levelIndex);
   }
 
@@ -245,7 +262,7 @@ export class Game {
     const center = this.player.getCenter();
     this.camera.snapTo(center.x, center.y, this.player.facing);
 
-    this.screen = 'playing';
+    this.setScreen('playing');
     this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
@@ -254,7 +271,7 @@ export class Game {
     this.isTestPlay = false;
     this.overlays.closeAll();
     this.audio.pauseMusic();
-    this.screen = 'editor';
+    this.setScreen('editor');
     this.editor.resumeDraft();
   }
 
@@ -328,7 +345,7 @@ export class Game {
     this.hud.updateProgress(100);
 
     if (this.isTestPlay) {
-      this.screen = 'levelComplete';
+      this.setScreen('levelComplete');
       this.levelCompleteTimer = LEVEL_COMPLETE_DURATION;
       this.overlays.showLevelComplete(this.currentLevel, this.levelDeaths, true);
       return;
@@ -336,14 +353,14 @@ export class Game {
 
     const isLastLevel = this.currentLevelIndex >= this.store.getCount() - 1;
     if (isLastLevel) {
-      this.screen = 'victory';
+      this.setScreen('victory');
       this.overlays.showVictory(
         this.store.getLevels(),
         this.deathsByLevel,
         this.totalDeaths
       );
     } else {
-      this.screen = 'levelComplete';
+      this.setScreen('levelComplete');
       this.levelCompleteTimer = LEVEL_COMPLETE_DURATION;
       this.overlays.showLevelComplete(this.currentLevel, this.levelDeaths, false);
     }
@@ -377,7 +394,7 @@ export class Game {
           this.returnToEditorFromTestPlay();
         } else {
           this.loadLevelInternal(this.currentLevelIndex + 1, true);
-          this.screen = 'playing';
+          this.setScreen('playing');
           this.syncHud();
         }
       }
@@ -461,6 +478,7 @@ export class Game {
       muted: this.audio.isMuted(),
       progressPercent: this.computeProgressPercent(),
       isTestPlay: this.isTestPlay,
+      touchMode: this.touchControls.isTouchMode(),
     });
   }
 
@@ -502,6 +520,9 @@ export class Game {
       },
       get musicActive() {
         return game.audio.isMusicActive();
+      },
+      get touchControlsVisible() {
+        return game.touchControls.isVisible();
       },
       get player() {
         return game.player.getSnapshot();

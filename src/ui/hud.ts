@@ -7,6 +7,7 @@ export interface HudState {
   muted: boolean;
   progressPercent: number;
   isTestPlay: boolean;
+  touchMode: boolean;
 }
 
 export class HudController {
@@ -14,6 +15,7 @@ export class HudController {
   private readonly levelNameEl: HTMLElement;
   private readonly levelDeathsEl: HTMLElement;
   private readonly totalDeathsEl: HTMLElement;
+  private readonly restartBtn: HTMLButtonElement;
   private readonly muteBtn: HTMLButtonElement;
   private readonly editorBtn: HTMLButtonElement;
   private readonly backToEditorBtn: HTMLButtonElement;
@@ -25,6 +27,7 @@ export class HudController {
 
   constructor(callbacks: {
     onToggleMute: () => void;
+    onRestart: () => void;
     onOpenEditor: () => void;
     onReturnToEditor: () => void;
   }) {
@@ -32,12 +35,18 @@ export class HudController {
     this.levelNameEl = this.mustGet('hud-level-name');
     this.levelDeathsEl = this.mustGet('hud-level-deaths');
     this.totalDeathsEl = this.mustGet('hud-total-deaths');
+    this.restartBtn = this.mustGet('hud-restart-btn') as HTMLButtonElement;
     this.muteBtn = this.mustGet('hud-mute-btn') as HTMLButtonElement;
     this.editorBtn = this.mustGet('hud-editor-btn') as HTMLButtonElement;
     this.backToEditorBtn = this.mustGet('hud-back-editor-btn') as HTMLButtonElement;
     this.progressBar = this.mustGet('hud-progress') as HTMLProgressElement;
     this.progressTrack = this.mustGet('hud-progress-track');
     this.progressPctEl = this.mustGet('hud-progress-pct');
+
+    this.restartBtn.addEventListener('click', () => {
+      callbacks.onRestart();
+      this.restartBtn.blur();
+    });
 
     this.muteBtn.addEventListener('click', () => {
       callbacks.onToggleMute();
@@ -62,6 +71,8 @@ export class HudController {
     this.levelNameEl.textContent = state.levelName.toUpperCase();
     this.levelDeathsEl.textContent = String(state.levelDeaths);
     this.totalDeathsEl.textContent = String(state.totalDeaths);
+
+    this.restartBtn.hidden = !state.touchMode;
 
     this.muteBtn.setAttribute('aria-pressed', String(state.muted));
     this.muteBtn.textContent = state.muted ? 'MUTED [M]' : 'AUDIO ON [M]';

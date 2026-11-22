@@ -436,4 +436,184 @@ test.describe('Stick Run E2E Playability', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('Touch controls stay hidden on desktop, appear on touch input, support multi-touch run+slide+double-jump, and hide in Level Editor', async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
+    });
+    page.on('pageerror', (err) => {
+      errors.push(`pageerror: ${err.message}`);
+    });
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/');
+    await expect(page.locator('#touch-controls')).toBeHidden();
+
+    // Start run on desktop pointer — touch controls remain hidden until touch input occurs
+    await page.getByRole('button', { name: 'START RUN' }).click();
+    await expect(page.locator('#touch-controls')).toBeHidden();
+    await expect(page.locator('#hud-restart-btn')).toBeHidden();
+
+    // First touch pointerdown reveals touch controls + HUD restart button
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: 'touch',
+        })
+      );
+    });
+    await expect(page.locator('#touch-controls')).toBeVisible();
+    await expect(page.locator('#hud-restart-btn')).toBeVisible();
+
+    const startState = await getGame(page);
+
+    // Multi-touch: hold Right with pointerId=10, then hold Slide with pointerId=11
+    await page.evaluate(() => {
+      const rightBtn = document.getElementById('touch-right-btn')!;
+      const r = rightBtn.getBoundingClientRect();
+      rightBtn.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 10,
+          pointerType: 'touch',
+          clientX: r.left + r.width * 0.5,
+          clientY: r.top + r.height * 0.5,
+        })
+      );
+    });
+    await page.waitForTimeout(260);
+    const afterTouchRun = await getGame(page);
+    expect(afterTouchRun.player.x).toBeGreaterThan(startState.player.x + 35);
+    expect(afterTouchRun.player.state).toBe('run');
+
+    // Simultaneously press Slide (pointerId=11) while Right (pointerId=10) stays held
+    await page.evaluate(() => {
+      const slideBtn = document.getElementById('touch-slide-btn')!;
+      const r = slideBtn.getBoundingClientRect();
+      slideBtn.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 11,
+          pointerType: 'touch',
+          clientX: r.left + r.width * 0.5,
+          clientY: r.top + r.height * 0.5,
+        })
+      );
+    });
+    await page.waitForTimeout(100);
+    const duringTouchSlide = await getGame(page);
+    expect(duringTouchSlide.player.state).toBe('slide');
+    expect(duringTouchSlide.player.height).toBe(28);
+
+    // Release Slide and Right, then test thumb-slide across move pad + Jump & Double Jump
+    await page.evaluate(() => {
+      const slideBtn = document.getElementById('touch-slide-btn')!;
+      const movePad = document.getElementById('touch-move-pad')!;
+      slideBtn.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 11,
+          pointerType: 'touch',
+        })
+      );
+      // Slide thumb from right to left side of movePad without lifting pointerId=10
+      const padRect = movePad.getBoundingClientRect();
+      movePad.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 10,
+          pointerType: 'touch',
+          clientX: padRect.left + padRect.width * 0.2,
+          clientY: padRect.top + padRect.height * 0.5,
+        })
+      );
+    });
+    await page.waitForTimeout(140);
+    await page.evaluate(() => {
+      const movePad = document.getElementById('touch-move-pad')!;
+      movePad.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 10,
+          pointerType: 'touch',
+        })
+      );
+    });
+    await page.waitForTimeout(260);
+
+    // Tap Jump twice for Jump + Double Jump
+    await page.evaluate(() => {
+      const jumpBtn = document.getElementById('touch-jump-btn')!;
+      jumpBtn.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 12,
+          pointerType: 'touch',
+        })
+      );
+    });
+    await page.waitForTimeout(110);
+    const firstTouchJump = await getGame(page);
+    expect(firstTouchJump.player.grounded).toBe(false);
+    expect(firstTouchJump.player.jumpsRemaining).toBe(1);
+
+    await page.evaluate(() => {
+      const jumpBtn = document.getElementById('touch-jump-btn')!;
+      jumpBtn.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 12,
+          pointerType: 'touch',
+        })
+      );
+      jumpBtn.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 13,
+          pointerType: 'touch',
+        })
+      );
+    });
+    await page.waitForTimeout(80);
+    const doubleTouchJump = await getGame(page);
+    expect(doubleTouchJump.player.jumpsRemaining).toBe(0);
+    expect(doubleTouchJump.player.state).toBe('doubleJump');
+
+    await page.evaluate(() => {
+      const jumpBtn = document.getElementById('touch-jump-btn')!;
+      jumpBtn.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 13,
+          pointerType: 'touch',
+        })
+      );
+    });
+
+    // HUD Restart button resets player back to spawn
+    await page.locator('#hud-restart-btn').click();
+    await page.waitForTimeout(80);
+    const afterRestart = await getGame(page);
+    expect(Math.abs(afterRestart.player.x - afterRestart.level.spawn.x)).toBeLessThan(10);
+
+    // Opening Level Editor hides touch controls; returning to game shows them again
+    await page.locator('#hud-editor-btn').click();
+    await expect(page.locator('#editor-overlay')).toBeVisible();
+    await expect(page.locator('#touch-controls')).toBeHidden();
+
+    await page.locator('#ed-back-btn').click();
+    await expect(page.locator('#touch-controls')).toBeVisible();
+
+    expect(errors).toEqual([]);
+  });
 });
