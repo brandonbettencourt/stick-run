@@ -64,7 +64,7 @@ export class HudController {
     this.totalDeathsEl.textContent = String(state.totalDeaths);
 
     this.muteBtn.setAttribute('aria-pressed', String(state.muted));
-    this.muteBtn.textContent = state.muted ? 'MUTED [M]' : 'SFX ON [M]';
+    this.muteBtn.textContent = state.muted ? 'MUTED [M]' : 'AUDIO ON [M]';
     this.muteBtn.classList.toggle('is-muted', state.muted);
 
     this.editorBtn.hidden = state.isTestPlay;

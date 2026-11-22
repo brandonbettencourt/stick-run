@@ -1,6 +1,6 @@
 import type { LevelData } from '../levels/types.ts';
 import { LevelPlaylistStore, cloneLevelData } from '../levels/store.ts';
-import { AudioManager } from './audio.ts';
+import { AudioManager, GAME_MUSIC_URL } from './audio.ts';
 import { Camera } from './camera.ts';
 import {
   DEATH_DURATION,
@@ -38,6 +38,8 @@ export interface GameDebugHook {
   readonly deathsByLevel: readonly number[];
   readonly progressPercent: number;
   readonly muted: boolean;
+  readonly musicUrl: string | null;
+  readonly musicActive: boolean;
   readonly player: PlayerSnapshot;
   readonly level: {
     readonly id: number;
@@ -134,6 +136,7 @@ export class Game {
         this.deathsByLevel = this.store.getLevels().map((_, i) => this.deathsByLevel[i] ?? 0);
         this.loadLevelInternal(idx, true);
         this.screen = 'playing';
+        this.audio.playMusic(GAME_MUSIC_URL);
         this.syncHud();
       },
       onTestPlay: (draftLevel) => {
@@ -199,6 +202,7 @@ export class Game {
     );
     this.loadLevelInternal(clamped, true);
     this.screen = 'playing';
+    this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
 
@@ -213,12 +217,14 @@ export class Game {
     this.editor.close();
     this.loadLevelInternal(targetIndex, true);
     this.screen = 'playing';
+    this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
 
   openEditor(levelIndex?: number): void {
     this.isTestPlay = false;
     this.overlays.closeAll();
+    this.audio.pauseMusic();
     this.screen = 'editor';
     this.editor.open(levelIndex);
   }
@@ -240,12 +246,14 @@ export class Game {
     this.camera.snapTo(center.x, center.y, this.player.facing);
 
     this.screen = 'playing';
+    this.audio.playMusic(GAME_MUSIC_URL);
     this.syncHud();
   }
 
   private returnToEditorFromTestPlay(): void {
     this.isTestPlay = false;
     this.overlays.closeAll();
+    this.audio.pauseMusic();
     this.screen = 'editor';
     this.editor.resumeDraft();
   }
@@ -488,6 +496,12 @@ export class Game {
       },
       get muted() {
         return game.audio.isMuted();
+      },
+      get musicUrl() {
+        return game.audio.getMusicUrl();
+      },
+      get musicActive() {
+        return game.audio.isMusicActive();
       },
       get player() {
         return game.player.getSnapshot();

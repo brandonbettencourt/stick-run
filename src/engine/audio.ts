@@ -1,3 +1,5 @@
+export const GAME_MUSIC_URL = './music/velocity_corridor.mp3';
+
 export interface IAudioManager {
   isMuted(): boolean;
   setMuted(muted: boolean): void;
@@ -8,6 +10,7 @@ export interface IAudioManager {
   playDeath(): void;
   playPortal(): void;
   playMusic(url: string, volume?: number): void;
+  pauseMusic(): void;
   stopMusic(): void;
 }
 
@@ -20,6 +23,8 @@ export class AudioManager implements IAudioManager {
   private muted = false;
   private musicElement: HTMLAudioElement | null = null;
   private musicUrl: string | null = null;
+  private musicShouldPlay = false;
+  private unlockHandler: (() => void) | null = null;
   private readonly onMuteListeners = new Set<(muted: boolean) => void>();
 
   onMuteChange(listener: (muted: boolean) => void): () => void {
@@ -35,6 +40,9 @@ export class AudioManager implements IAudioManager {
     this.muted = muted;
     if (this.musicElement) {
       this.musicElement.muted = muted;
+      if (!muted && this.musicShouldPlay && this.musicElement.paused) {
+        this.startMusicElementPlayback(this.musicElement);
+      }
     }
     for (const listener of this.onMuteListeners) {
       listener(muted);
@@ -44,6 +52,14 @@ export class AudioManager implements IAudioManager {
   toggleMute(): boolean {
     this.setMuted(!this.muted);
     return this.muted;
+  }
+
+  getMusicUrl(): string | null {
+    return this.musicUrl;
+  }
+
+  isMusicActive(): boolean {
+    return this.musicShouldPlay && this.musicElement !== null;
   }
 
   private ensureContext(): AudioContext | null {
@@ -223,35 +239,82 @@ export class AudioManager implements IAudioManager {
     });
   }
 
+  private attachUnlockListeners(): void {
+    if (typeof window === 'undefined' || this.unlockHandler) return;
+    this.unlockHandler = () => {
+      this.detachUnlockListeners();
+      if (this.musicShouldPlay && this.musicElement && this.musicElement.paused) {
+        this.startMusicElementPlayback(this.musicElement);
+      }
+    };
+    window.addEventListener('pointerdown', this.unlockHandler, { capture: true });
+    window.addEventListener('keydown', this.unlockHandler, { capture: true });
+  }
+
+  private detachUnlockListeners(): void {
+    if (typeof window === 'undefined' || !this.unlockHandler) return;
+    window.removeEventListener('pointerdown', this.unlockHandler, { capture: true });
+    window.removeEventListener('keydown', this.unlockHandler, { capture: true });
+    this.unlockHandler = null;
+  }
+
+  private startMusicElementPlayback(audio: HTMLAudioElement): void {
+    const playPromise = audio.play();
+    if (!playPromise) return;
+    void playPromise
+      .then(() => {
+        if (this.musicElement === audio) {
+          this.detachUnlockListeners();
+        }
+      })
+      .catch(() => {
+        // Browser may defer playback until a user gesture; retry on next input.
+        if (this.musicShouldPlay && this.musicElement === audio) {
+          this.attachUnlockListeners();
+        }
+      });
+  }
+
   /**
-   * Hook for dropping in a custom looping background music track (e.g., '/music/synthwave.mp3').
-   * Automatically respects the global mute toggle (`M` key / HUD toggle).
+   * Plays a looping background music track (e.g., './music/velocity_corridor.mp3').
+   * Automatically respects the global mute toggle (`M` key / HUD toggle) and recovers from autoplay blocks.
    */
   playMusic(url: string, volume = 0.35): void {
     if (typeof Audio === 'undefined') return;
+    this.musicShouldPlay = true;
 
     if (this.musicElement && this.musicUrl === url) {
       this.musicElement.volume = volume;
       this.musicElement.muted = this.muted;
       if (this.musicElement.paused) {
-        void this.musicElement.play().catch(() => {});
+        this.startMusicElementPlayback(this.musicElement);
       }
       return;
     }
 
     this.stopMusic();
+    this.musicShouldPlay = true;
     this.musicUrl = url;
     const audio = new Audio(url);
     audio.loop = true;
+    audio.preload = 'auto';
     audio.volume = volume;
     audio.muted = this.muted;
     this.musicElement = audio;
-    void audio.play().catch(() => {
-      // Browser may defer playback until a user gesture; next call or gesture can resume.
-    });
+    this.startMusicElementPlayback(audio);
+  }
+
+  pauseMusic(): void {
+    this.musicShouldPlay = false;
+    this.detachUnlockListeners();
+    if (this.musicElement && !this.musicElement.paused) {
+      this.musicElement.pause();
+    }
   }
 
   stopMusic(): void {
+    this.musicShouldPlay = false;
+    this.detachUnlockListeners();
     if (this.musicElement) {
       this.musicElement.pause();
       this.musicElement.currentTime = 0;

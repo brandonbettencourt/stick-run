@@ -16,6 +16,8 @@ async function getGame(page: Page) {
       deathsByLevel: [...g.deathsByLevel],
       progressPercent: g.progressPercent,
       muted: g.muted,
+      musicUrl: g.musicUrl,
+      musicActive: g.musicActive,
       player: { ...g.player },
       level: {
         ...g.level,
@@ -41,11 +43,17 @@ test.describe('Stick Run E2E Playability', () => {
     await page.goto('/');
     await expect(page.locator('#title-dialog')).toBeVisible();
 
+    const musicResponsePromise = page.waitForResponse(
+      (res) => res.url().includes('velocity_corridor.mp3') && res.status() < 400
+    );
     await page.getByRole('button', { name: 'START RUN' }).click();
     await expect(page.locator('#title-dialog')).not.toBeVisible();
+    await musicResponsePromise;
 
     const startState = await getGame(page);
     expect(startState.screen).toBe('playing');
+    expect(startState.musicActive).toBe(true);
+    expect(startState.musicUrl).toBe('./music/velocity_corridor.mp3');
     expect(startState.levelId).toBe(1);
     expect(startState.levelCount).toBe(10);
     expect(startState.player.height).toBe(56);
