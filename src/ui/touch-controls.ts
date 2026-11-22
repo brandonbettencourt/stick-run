@@ -36,6 +36,7 @@ export class TouchControlsController {
     this.bindMovePad();
     this.bindActionButton(this.slideBtn, this.slidePointers, 'down');
     this.bindActionButton(this.jumpBtn, this.jumpPointers, 'jump');
+    this.preventSafariZoom();
 
     // Prevent long-press context menu on touch controls
     this.root.addEventListener('contextmenu', (e) => {
@@ -49,6 +50,43 @@ export class TouchControlsController {
     });
 
     this.syncVisibility();
+  }
+
+  /**
+   * iOS Safari still triggers double-tap-to-zoom and two-finger pinch-zoom on rapid
+   * taps (like double-jumping) unless touch/gesture events explicitly call preventDefault().
+   */
+  private preventSafariZoom(): void {
+    const blockTouchDefault = (e: Event) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    // Non-passive listeners on touch controls stop iOS double-tap zoom while Pointer Events continue firing
+    this.root.addEventListener('touchstart', blockTouchDefault, { passive: false });
+    this.root.addEventListener('touchmove', blockTouchDefault, { passive: false });
+    this.root.addEventListener('touchend', blockTouchDefault, { passive: false });
+    this.root.addEventListener('dblclick', blockTouchDefault);
+    this.root.addEventListener('gesturestart', blockTouchDefault, { passive: false });
+    this.root.addEventListener('gesturechange', blockTouchDefault, { passive: false });
+
+    // Also block stray double-tap / pinch-zoom on the game canvas during active touch play
+    const canvas = document.getElementById('game-canvas');
+    if (canvas) {
+      canvas.addEventListener('touchstart', blockTouchDefault, { passive: false });
+      canvas.addEventListener('touchend', blockTouchDefault, { passive: false });
+      canvas.addEventListener('dblclick', blockTouchDefault);
+    }
+
+    // Block Safari pinch-zoom gestures across the document while touch gameplay controls are active
+    const blockGameplayGesture = (e: Event) => {
+      if (this.isVisible() && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('gesturestart', blockGameplayGesture, { passive: false });
+    document.addEventListener('gesturechange', blockGameplayGesture, { passive: false });
   }
 
   onTouchModeChange(listener: (active: boolean) => void): () => void {

@@ -600,6 +600,19 @@ test.describe('Stick Run E2E Playability', () => {
       );
     });
 
+    // Verify Safari double-tap-to-zoom events (touchstart/touchend/dblclick) are prevented on Jump
+    const zoomPrevented = await page.evaluate(() => {
+      const jumpBtn = document.getElementById('touch-jump-btn')!;
+      const ts = new Event('touchstart', { bubbles: true, cancelable: true });
+      const te = new Event('touchend', { bubbles: true, cancelable: true });
+      const dc = new MouseEvent('dblclick', { bubbles: true, cancelable: true });
+      jumpBtn.dispatchEvent(ts);
+      jumpBtn.dispatchEvent(te);
+      jumpBtn.dispatchEvent(dc);
+      return ts.defaultPrevented && te.defaultPrevented && dc.defaultPrevented;
+    });
+    expect(zoomPrevented).toBe(true);
+
     // HUD Restart button resets player back to spawn
     await page.locator('#hud-restart-btn').click();
     await page.waitForTimeout(80);

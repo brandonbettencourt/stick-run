@@ -24,6 +24,11 @@
   box-sizing: border-box;
 }
 
+html {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
@@ -33,6 +38,8 @@ body {
   display: grid;
   place-items: center;
   padding: 16px;
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 .game-shell {
@@ -41,6 +48,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  touch-action: manipulation;
 }
 
 .stage-frame {
@@ -56,12 +64,14 @@ body {
     0 0 42px rgba(34, 211, 238, 0.14),
     0 24px 64px rgba(0, 0, 0, 0.65);
   overflow: hidden;
+  touch-action: none;
 }
 
 #game-canvas {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 /* Minimalist neon HUD + top progress bar */
@@ -1091,6 +1101,7 @@ kbd {
     max(16px, env(safe-area-inset-bottom, 0px))
     max(16px, env(safe-area-inset-left, 0px));
   pointer-events: none;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -1147,6 +1158,11 @@ kbd {
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   transition: transform 60ms ease, background-color 80ms ease, border-color 80ms ease, box-shadow 80ms ease;
+}
+
+.touch-btn svg,
+.touch-btn-label {
+  pointer-events: none;
 }
 
 .touch-btn--move {
