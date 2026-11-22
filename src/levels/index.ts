@@ -9,6 +9,7 @@ import level7 from './level7.json';
 import level8 from './level8.json';
 import level9 from './level9.json';
 import level10 from './level10.json';
+import level11 from './level11.json';
 
 export const BUILT_IN_LEVELS: readonly LevelData[] = [
   level1 as LevelData,
@@ -21,6 +22,7 @@ export const BUILT_IN_LEVELS: readonly LevelData[] = [
   level8 as LevelData,
   level9 as LevelData,
   level10 as LevelData,
+  level11 as LevelData,
 ];
 
 /** Backwards-compatible alias for all built-in levels */

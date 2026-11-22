@@ -83,6 +83,18 @@ export const COLORS = {
   // World hints
   hintText: 'rgba(148, 163, 184, 0.72)',
   hintGlow: 'rgba(56, 189, 248, 0.35)',
+
+  // Boss (Crimson / Neon Red)
+  bossCore: '#ffe4e6',
+  bossMid: '#f43f5e',
+  bossGlow: '#ff1744',
+  bossEye: '#fef08a',
+  bossBallCore: '#ffffff',
+  bossBallInner: '#ff4d6d',
+  bossBallGlow: '#ff1744',
+  doorLockedFill: '#2a0f1c',
+  doorLockedStroke: '#f43f5e',
+  doorOpenStroke: '#10b981',
 } as const;
 
 /**

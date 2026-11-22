@@ -3,6 +3,7 @@ import { COLORS, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './constants.ts';
 import type { Camera } from './camera.ts';
 import type { ParticleSystem } from './particles.ts';
 import type { Player } from '../entities/player.ts';
+import type { BossEncounter } from '../entities/boss.ts';
 import { renderLasers, renderSpikes } from '../entities/hazards.ts';
 import { renderPortal } from '../entities/portal.ts';
 
@@ -13,7 +14,8 @@ export class SceneRenderer {
     player: Player,
     camera: Camera,
     particles: ParticleSystem,
-    levelTime: number
+    levelTime: number,
+    boss: BossEncounter | null = null
   ): void {
     // 1. Deep dark background + subtle vertical ambient gradient
     const bgGrad = ctx.createLinearGradient(0, 0, 0, VIEWPORT_HEIGHT);
@@ -30,11 +32,17 @@ export class SceneRenderer {
     ctx.save();
     ctx.translate(-camera.renderX, -camera.renderY);
 
+    if (boss) {
+      boss.renderArenaBackdrop(ctx);
+    }
     this.renderHints(ctx, level, levelTime);
     this.renderSolids(ctx, level.solids, camera.renderX);
     renderSpikes(ctx, level.spikes, levelTime);
     renderLasers(ctx, level.lasers, levelTime);
     renderPortal(ctx, level.portal, levelTime);
+    if (boss) {
+      boss.renderForeground(ctx);
+    }
     player.render(ctx);
     particles.render(ctx);
 

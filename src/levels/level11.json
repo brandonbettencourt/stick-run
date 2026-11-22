@@ -1,0 +1,46 @@
+{
+  "id": 11,
+  "name": "Crimson Titan",
+  "subtitle": "Boss Arena — Survive 30 seconds of bouncing laser balls, then dash under the giant to escape!",
+  "width": 1180,
+  "height": 540,
+  "killY": 620,
+  "spawn": { "x": 34, "y": 416 },
+  "portal": { "x": 1094, "y": 376, "width": 44, "height": 96 },
+  "solids": [
+    { "x": 0, "y": 472, "width": 1180, "height": 68 },
+    { "x": 0, "y": 56, "width": 16, "height": 416 },
+    { "x": 16, "y": 56, "width": 84, "height": 312 },
+    { "x": 100, "y": 56, "width": 24, "height": 312 },
+    { "x": 124, "y": 56, "width": 912, "height": 32 },
+    { "x": 1036, "y": 56, "width": 24, "height": 312 },
+    { "x": 1060, "y": 56, "width": 100, "height": 312 },
+    { "x": 1160, "y": 56, "width": 20, "height": 416 }
+  ],
+  "spikes": [],
+  "lasers": [],
+  "hints": [
+    { "x": 22, "y": 394, "text": "ENTER →" }
+  ],
+  "boss": {
+    "name": "Crimson Titan",
+    "scale": 3,
+    "x": 988,
+    "floorY": 472,
+    "arenaBounds": { "x": 124, "y": 88, "width": 912, "height": 384 },
+    "triggerX": 144,
+    "entryDoor": { "x": 100, "y": 368, "width": 24, "height": 104 },
+    "exitDoor": { "x": 1036, "y": 368, "width": 24, "height": 104 },
+    "survivalDuration": 30,
+    "jumpVelocity": -660,
+    "gravity": 1550,
+    "jumpCooldownMin": 1.5,
+    "jumpCooldownMax": 2.5,
+    "throwCooldown": 1.75,
+    "windupDuration": 0.42,
+    "ballSpeed": 380,
+    "ballRadius": 11,
+    "maxBounces": 5,
+    "maxActiveBalls": 5
+  }
+}

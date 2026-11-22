@@ -77,7 +77,8 @@ export class OverlayController {
     levels.forEach((lvl, idx) => {
       const opt = document.createElement('option');
       opt.value = String(idx);
-      opt.textContent = `Level ${idx + 1}: ${lvl.name}`;
+      const bossTag = lvl.boss ? ' [BOSS]' : '';
+      opt.textContent = `Level ${idx + 1}${bossTag}: ${lvl.name}`;
       this.levelSelectEl.append(opt);
     });
     if (prev && Number(prev) < levels.length) {
@@ -86,7 +87,7 @@ export class OverlayController {
       this.levelSelectEl.value = '0';
     }
 
-    this.titleSubtitleEl.textContent = `Sprint, double-jump, and slide through ${levels.length} neon obstacle courses — or build your own in the Level Editor!`;
+    this.titleSubtitleEl.textContent = `Sprint, double-jump, and slide through ${levels.length} neon obstacle courses & boss arenas — or build your own in the Level Editor!`;
   }
 
   showTitle(levels: readonly LevelData[]): void {
@@ -106,7 +107,9 @@ export class OverlayController {
   ): void {
     this.lcTitleEl.textContent = isTestPlay
       ? 'TEST RUN CLEARED!'
-      : `LEVEL ${level.id} COMPLETE`;
+      : level.boss
+        ? `BOSS ${level.name.toUpperCase()} ESCAPED!`
+        : `LEVEL ${level.id} COMPLETE`;
     this.lcSubtitleEl.textContent = `${level.name} — ${levelDeaths} ${levelDeaths === 1 ? 'death' : 'deaths'}`;
     this.lcNextEl.textContent = isTestPlay
       ? 'Returning to Level Editor...'
@@ -136,7 +139,8 @@ export class OverlayController {
 
       const nameSpan = document.createElement('span');
       nameSpan.className = 'breakdown-name';
-      nameSpan.textContent = `Level ${idx + 1}: ${lvl.name}`;
+      const bossTag = lvl.boss ? ' [BOSS]' : '';
+      nameSpan.textContent = `Level ${idx + 1}${bossTag}: ${lvl.name}`;
 
       const countSpan = document.createElement('span');
       countSpan.className = 'breakdown-count';

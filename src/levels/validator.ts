@@ -347,6 +347,59 @@ export function validateLevel(
     });
   }
 
+  // Optional Boss encounter validation
+  if (level.boss) {
+    const b = level.boss;
+    if (!b.name || typeof b.name !== 'string') {
+      errors.push('Boss is missing a valid name.');
+    }
+    if (!isFinitePositive(b.scale) || b.scale < 1) {
+      errors.push('Boss scale must be >= 1.');
+    }
+    if (!isFinitePositive(b.survivalDuration)) {
+      errors.push('Boss survivalDuration must be positive.');
+    }
+    if (!isFiniteNumber(b.jumpVelocity) || b.jumpVelocity >= 0) {
+      errors.push('Boss jumpVelocity must be a negative finite number.');
+    }
+    if (!isFinitePositive(b.gravity)) {
+      errors.push('Boss gravity must be positive.');
+    } else if (isFiniteNumber(b.jumpVelocity) && b.jumpVelocity < 0) {
+      const bossMaxJump = (b.jumpVelocity * b.jumpVelocity) / (2 * b.gravity);
+      if (bossMaxJump < PLAYER_STAND_HEIGHT + 12) {
+        errors.push(
+          `Boss jump height (${bossMaxJump.toFixed(1)}px) is too low for player (${PLAYER_STAND_HEIGHT}px) to run underneath.`
+        );
+      }
+    }
+    if (!isFinitePositive(b.ballSpeed) || !isFinitePositive(b.ballRadius)) {
+      errors.push('Boss laser ball speed and radius must be positive.');
+    }
+    if (!isFiniteNumber(b.maxBounces) || b.maxBounces < 0) {
+      errors.push('Boss maxBounces must be >= 0.');
+    }
+    if (
+      !isFinitePositive(b.arenaBounds.width) ||
+      !isFinitePositive(b.arenaBounds.height)
+    ) {
+      errors.push('Boss arenaBounds must have positive width and height.');
+    }
+    if (
+      b.x < b.arenaBounds.x ||
+      b.x > b.arenaBounds.x + b.arenaBounds.width
+    ) {
+      errors.push('Boss x position must lie inside arenaBounds.');
+    }
+    if (
+      !isFinitePositive(b.entryDoor.width) ||
+      !isFinitePositive(b.entryDoor.height) ||
+      !isFinitePositive(b.exitDoor.width) ||
+      !isFinitePositive(b.exitDoor.height)
+    ) {
+      errors.push('Boss entryDoor and exitDoor must have positive dimensions.');
+    }
+  }
+
   // Physics-based reachability graph
   const segments = buildWalkableSegments(level);
   const maxJumpH = maxDoubleJumpHeight();

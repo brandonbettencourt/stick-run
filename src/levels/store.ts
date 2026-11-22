@@ -17,6 +17,16 @@ export function cloneLevelData(level: LevelData): LevelData {
     spikes: level.spikes.map((sp) => ({ ...sp })),
     lasers: level.lasers.map((lz) => ({ ...lz })),
     hints: level.hints ? level.hints.map((h) => ({ ...h })) : [],
+    ...(level.boss
+      ? {
+          boss: {
+            ...level.boss,
+            arenaBounds: { ...level.boss.arenaBounds },
+            entryDoor: { ...level.boss.entryDoor },
+            exitDoor: { ...level.boss.exitDoor },
+          },
+        }
+      : {}),
   };
 }
 
@@ -161,7 +171,21 @@ export class LevelPlaylistStore {
       if (!Array.isArray(parsed) || parsed.length === 0) {
         return BUILT_IN_LEVELS.map(cloneLevelData);
       }
-      return parsed.map((item) => cloneLevelData(item as LevelData));
+      const loaded = parsed.map((item) => cloneLevelData(item as LevelData));
+      const migrationKey = 'stick-run:migrated-boss-v1';
+      if (!localStorage.getItem(migrationKey)) {
+        const hasAnyBoss = loaded.some((lvl) => Boolean(lvl.boss));
+        if (!hasAnyBoss) {
+          for (const builtIn of BUILT_IN_LEVELS) {
+            if (builtIn.boss) {
+              loaded.push(cloneLevelData(builtIn));
+            }
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+        }
+        localStorage.setItem(migrationKey, '1');
+      }
+      return loaded;
     } catch {
       return BUILT_IN_LEVELS.map(cloneLevelData);
     }

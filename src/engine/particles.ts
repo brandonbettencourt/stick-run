@@ -188,6 +188,125 @@ export class ParticleSystem {
     }
   }
 
+  spawnBossStomp(x: number, y: number): void {
+    this.particles.push({
+      kind: 'ring',
+      x,
+      y: y - 2,
+      radiusX: 16,
+      radiusY: 4,
+      maxRadiusX: 92,
+      maxRadiusY: 18,
+      color: COLORS.bossGlow,
+      life: 0.34,
+      maxLife: 0.34,
+    });
+
+    for (let i = 0; i < 16; i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      this.particles.push({
+        kind: 'spark',
+        x: x + (Math.random() - 0.5) * 36,
+        y: y - 2,
+        vx: side * (90 + Math.random() * 190),
+        vy: -(45 + Math.random() * 120),
+        size: 2.2 + Math.random() * 2.4,
+        color: i % 3 === 0 ? COLORS.bossCore : COLORS.bossGlow,
+        alpha: 1,
+        life: 0.24 + Math.random() * 0.18,
+        maxLife: 0.42,
+        gravity: 460,
+      });
+    }
+  }
+
+  spawnLaserBallBounce(x: number, y: number, nx: number, ny: number): void {
+    for (let i = 0; i < 8; i++) {
+      const spread = (Math.random() - 0.5) * 1.4;
+      const baseAngle = Math.atan2(ny, nx) + spread;
+      const speed = 75 + Math.random() * 140;
+      this.particles.push({
+        kind: 'spark',
+        x,
+        y,
+        vx: Math.cos(baseAngle) * speed,
+        vy: Math.sin(baseAngle) * speed,
+        size: 1.8 + Math.random() * 1.8,
+        color: i % 2 === 0 ? COLORS.bossBallCore : COLORS.bossBallGlow,
+        alpha: 1,
+        life: 0.16 + Math.random() * 0.1,
+        maxLife: 0.26,
+        gravity: 160,
+      });
+    }
+  }
+
+  spawnLaserBallDissipate(x: number, y: number): void {
+    this.particles.push({
+      kind: 'ring',
+      x,
+      y,
+      radiusX: 6,
+      radiusY: 6,
+      maxRadiusX: 38,
+      maxRadiusY: 38,
+      color: COLORS.bossBallGlow,
+      life: 0.28,
+      maxLife: 0.28,
+    });
+
+    for (let i = 0; i < 14; i++) {
+      const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.3;
+      const speed = 60 + Math.random() * 150;
+      this.particles.push({
+        kind: 'spark',
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 2,
+        color: i % 3 === 0 ? COLORS.bossBallCore : COLORS.bossBallInner,
+        alpha: 1,
+        life: 0.22 + Math.random() * 0.14,
+        maxLife: 0.36,
+        gravity: 90,
+      });
+    }
+  }
+
+  spawnDoorBurst(x: number, y: number, color: string): void {
+    this.particles.push({
+      kind: 'ring',
+      x,
+      y,
+      radiusX: 8,
+      radiusY: 16,
+      maxRadiusX: 46,
+      maxRadiusY: 68,
+      color,
+      life: 0.34,
+      maxLife: 0.34,
+    });
+
+    for (let i = 0; i < 16; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 65 + Math.random() * 170;
+      this.particles.push({
+        kind: 'spark',
+        x: x + (Math.random() - 0.5) * 14,
+        y: y + (Math.random() - 0.5) * 60,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 2.2,
+        color: i % 3 === 0 ? '#ffffff' : color,
+        alpha: 1,
+        life: 0.26 + Math.random() * 0.16,
+        maxLife: 0.42,
+        gravity: 220,
+      });
+    }
+  }
+
   update(dt: number): void {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];

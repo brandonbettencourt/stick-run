@@ -19,6 +19,7 @@ async function getGame(page: Page) {
       musicUrl: g.musicUrl,
       musicActive: g.musicActive,
       player: { ...g.player },
+      boss: g.boss ? { ...g.boss, balls: [...g.boss.balls] } : null,
       level: {
         ...g.level,
         spawn: { ...g.level.spawn },
@@ -55,7 +56,7 @@ test.describe('Stick Run E2E Playability', () => {
     expect(startState.musicActive).toBe(true);
     expect(startState.musicUrl).toBe('./music/velocity_corridor.mp3');
     expect(startState.levelId).toBe(1);
-    expect(startState.levelCount).toBe(10);
+    expect(startState.levelCount).toBe(11);
     expect(startState.player.height).toBe(56);
     expect(startState.progressPercent).toBe(0);
     await expect(page.locator('#hud-progress-pct')).toHaveText('0%');
@@ -238,7 +239,7 @@ test.describe('Stick Run E2E Playability', () => {
     expect(errors).toEqual([]);
   });
 
-  test('all 10 built-in levels load and render cleanly without errors', async ({
+  test('all 11 built-in levels load and render cleanly without errors', async ({
     page,
   }) => {
     const errors: string[] = [];
@@ -251,17 +252,17 @@ test.describe('Stick Run E2E Playability', () => {
 
     await page.goto('/');
 
-    for (let lvl = 1; lvl <= 10; lvl++) {
+    for (let lvl = 1; lvl <= 11; lvl++) {
       await page.evaluate((n) => window.__GAME__?.loadLevel(n), lvl);
       await page.waitForTimeout(100);
 
       const state = await getGame(page);
       expect(state.levelId).toBe(lvl);
-      expect(state.levelCount).toBe(10);
+      expect(state.levelCount).toBe(11);
       expect(state.screen).toBe('playing');
       expect(state.player.state).not.toBe('dead');
 
-      await expect(page.locator('#hud-level')).toHaveText(`LVL ${lvl}/10`);
+      await expect(page.locator('#hud-level')).toHaveText(`LVL ${lvl}/11`);
 
       const hasDrawnPixels = await page.evaluate(() => {
         const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -328,12 +329,12 @@ test.describe('Stick Run E2E Playability', () => {
     await page.locator('#hud-back-editor-btn').click();
     await expect(page.locator('#editor-overlay')).toBeVisible();
 
-    // Exit editor to game and verify custom level sits at Level 5 of 11!
+    // Exit editor to game and verify custom level sits at Level 5 of 12!
     await page.locator('#ed-back-btn').click();
     await expect(page.locator('#editor-overlay')).not.toBeVisible();
 
     const customLevelState = await getGame(page);
-    expect(customLevelState.levelCount).toBe(11);
+    expect(customLevelState.levelCount).toBe(12);
     expect(customLevelState.levelId).toBe(5);
     expect(customLevelState.levelName).toBe("Gus's Turbo Track");
 
@@ -627,6 +628,175 @@ test.describe('Stick Run E2E Playability', () => {
     await page.locator('#ed-back-btn').click();
     await expect(page.locator('#touch-controls')).toBeVisible();
 
+    expect(errors).toEqual([]);
+  });
+
+  test('Level 11 Boss Arena slams entry door, runs 30s countdown, jumps & throws bouncing laser balls, unlocks exit at 0s, and lets player run under boss to win', async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
+    });
+    page.on('pageerror', (err) => {
+      errors.push(`pageerror: ${err.message}`);
+    });
+
+    await page.goto('/');
+    await page.evaluate(() => window.__GAME__?.loadLevel(11));
+
+    const initial = await getGame(page);
+    expect(initial.levelId).toBe(11);
+    expect(initial.levelName).toBe('Crimson Titan');
+    expect(initial.boss).not.toBeNull();
+    expect(initial.boss!.phase).toBe('waiting');
+    expect(initial.boss!.entryDoorClosed).toBe(false);
+    expect(initial.boss!.exitDoorOpen).toBe(false);
+    expect(initial.boss!.survivalDuration).toBe(30);
+    // Boss is ~3x the 56px tall player
+    expect(initial.boss!.height).toBeGreaterThanOrEqual(150);
+    await expect(page.locator('#hud-progress-pct')).toHaveText('30.0s');
+
+    const bossFixedX = initial.boss!.x;
+
+    // 1. Walk from bottom-left vestibule into the arena so entry door slams shut
+    await page.keyboard.down('ArrowRight');
+    await expect
+      .poll(async () => (await getGame(page)).boss?.phase, { timeout: 4000 })
+      .toBe('fighting');
+    await page.keyboard.up('ArrowRight');
+
+    const fightingStart = await getGame(page);
+    expect(fightingStart.boss!.entryDoorClosed).toBe(true);
+    expect(fightingStart.boss!.exitDoorOpen).toBe(false);
+
+    // 2. Verify locked entry door blocks player from leaving back to the left
+    await page.keyboard.down('ArrowLeft');
+    await page.waitForTimeout(450);
+    await page.keyboard.up('ArrowLeft');
+    const againstLeftDoor = await getGame(page);
+    expect(againstLeftDoor.player.x).toBeGreaterThanOrEqual(122);
+
+    // 3. Observe boss jumping in place, throwing laser balls, and balls bouncing off walls
+    // Dodge (double-jump / move) so aimed balls sail past us and bounce off the arena walls!
+    await expect
+      .poll(
+        async () => {
+          const g = await getGame(page);
+          if (g.boss?.phase === 'waiting') {
+            await page.keyboard.down('ArrowRight');
+            await page.waitForTimeout(480);
+            await page.keyboard.up('ArrowRight');
+            return false;
+          }
+          // Jump over any incoming laser ball so it bounces off the left wall behind us
+          const incomingBall = g.boss?.balls.find(
+            (b) =>
+              Math.abs(b.x - g.player.x) < 145 &&
+              Math.abs(b.y - (g.player.y + 28)) < 90
+          );
+          if (incomingBall && g.player.grounded) {
+            await page.keyboard.down('Space');
+            await page.waitForTimeout(220);
+            await page.keyboard.up('Space');
+          }
+          return Boolean(
+            g.boss &&
+              g.boss.jumpCount >= 1 &&
+              g.boss.totalBallsThrown >= 1 &&
+              g.boss.maxObservedBounces >= 1 &&
+              g.boss.timeRemaining < 29.5
+          );
+        },
+        { timeout: 10_000, intervals: [60] }
+      )
+      .toBe(true);
+
+    const midFight = await getGame(page);
+    expect(midFight.boss!.x).toBe(bossFixedX);
+    expect(midFight.boss!.maxObservedBounces).toBeLessThanOrEqual(5);
+
+    // 4. Advance countdown close to 0 and verify exit door behind boss unlocks
+    await page.evaluate(() => {
+      window.__GAME__?.setBossTimeRemaining(0.25);
+    });
+
+    await expect
+      .poll(
+        async () => {
+          const g = await getGame(page);
+          if (g.boss?.phase === 'waiting') {
+            await page.keyboard.down('ArrowRight');
+            await page.waitForTimeout(500);
+            await page.keyboard.up('ArrowRight');
+            await page.evaluate(() => window.__GAME__?.setBossTimeRemaining(0.2));
+            return null;
+          }
+          return g.boss?.phase ?? null;
+        },
+        { timeout: 6000 }
+      )
+      .toBe('escape');
+
+    const escapeState = await getGame(page);
+    expect(escapeState.boss!.exitDoorOpen).toBe(true);
+    await expect(page.locator('#hud-progress-pct')).toHaveText('ESCAPE!');
+
+    // 5. Sprint under the jumping boss and reach the exit portal to trigger Victory!
+    const escapeStart = Date.now();
+    while (Date.now() - escapeStart < 15_000) {
+      const g = await getGame(page);
+      if (g.screen === 'victory') {
+        break;
+      }
+      if (g.boss?.phase === 'waiting') {
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(480);
+        await page.keyboard.up('ArrowRight');
+        await page.evaluate(() => window.__GAME__?.setBossTimeRemaining(0.01));
+        await page.waitForTimeout(60);
+        continue;
+      }
+
+      const distToBoss = g.boss!.x - g.player.x;
+      const bossClearance = 472 - g.boss!.footY;
+
+      if (distToBoss > 115) {
+        // Sprint toward the boss while jumping over any low ball in our path
+        const ballInPath = g.boss!.balls.find(
+          (b) =>
+            b.x > g.player.x - 10 &&
+            b.x < g.player.x + 110 &&
+            b.y > g.player.y - 10
+        );
+        await page.keyboard.down('ArrowRight');
+        if (ballInPath && g.player.grounded) {
+          await page.keyboard.down('Space');
+          await page.waitForTimeout(180);
+          await page.keyboard.up('Space');
+        } else {
+          await page.waitForTimeout(70);
+        }
+        await page.keyboard.up('ArrowRight');
+      } else if (distToBoss > -55) {
+        // Wait right in front of boss, then sprint full-speed underneath when he jumps!
+        if (bossClearance >= 48 || g.boss!.vy < -280) {
+          await page.keyboard.down('ArrowRight');
+          await page.waitForTimeout(700);
+          await page.keyboard.up('ArrowRight');
+        } else {
+          await page.waitForTimeout(25);
+        }
+      } else {
+        // Past boss — sprint straight into the exit portal!
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(200);
+        await page.keyboard.up('ArrowRight');
+      }
+    }
+
+    await expect(page.locator('#victory-dialog')).toBeVisible({ timeout: 5000 });
+    expect((await getGame(page)).screen).toBe('victory');
     expect(errors).toEqual([]);
   });
 });

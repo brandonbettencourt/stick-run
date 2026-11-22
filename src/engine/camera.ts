@@ -11,6 +11,7 @@ export class Camera {
 
   private levelWidth = VIEWPORT_WIDTH;
   private levelHeight = VIEWPORT_HEIGHT;
+  private lockX: number | null = null;
 
   // Horizontal deadzone boundaries as fractions of viewport width
   private readonly deadzoneLeft = VIEWPORT_WIDTH * 0.3;
@@ -21,11 +22,19 @@ export class Camera {
   configure(levelWidth: number, levelHeight: number): void {
     this.levelWidth = Math.max(VIEWPORT_WIDTH, levelWidth);
     this.levelHeight = Math.max(VIEWPORT_HEIGHT, levelHeight);
+    this.lockX = null;
+  }
+
+  setLockX(x: number | null): void {
+    this.lockX = x === null ? null : this.clampX(x);
   }
 
   snapTo(targetX: number, targetY: number, facing: 1 | -1 = 1): void {
     this.currentLookAhead = facing * this.lookAheadDist;
-    this.x = this.clampX(targetX - VIEWPORT_WIDTH * 0.35 + this.currentLookAhead);
+    this.x =
+      this.lockX !== null
+        ? this.lockX
+        : this.clampX(targetX - VIEWPORT_WIDTH * 0.35 + this.currentLookAhead);
     this.y = this.clampY(targetY - VIEWPORT_HEIGHT * 0.55);
     this.shakeTime = 0;
     this.shakeOffsetX = 0;
@@ -48,16 +57,19 @@ export class Camera {
     this.currentLookAhead +=
       (desiredLookAhead - this.currentLookAhead) * Math.min(1, dt * 4.5);
 
-    const screenX = targetCenterX + this.currentLookAhead - this.x;
     let desiredX = this.x;
-
-    if (screenX > this.deadzoneRight) {
-      desiredX = targetCenterX + this.currentLookAhead - this.deadzoneRight;
-    } else if (screenX < this.deadzoneLeft) {
-      desiredX = targetCenterX + this.currentLookAhead - this.deadzoneLeft;
+    if (this.lockX !== null) {
+      desiredX = this.lockX;
+    } else {
+      const screenX = targetCenterX + this.currentLookAhead - this.x;
+      if (screenX > this.deadzoneRight) {
+        desiredX = targetCenterX + this.currentLookAhead - this.deadzoneRight;
+      } else if (screenX < this.deadzoneLeft) {
+        desiredX = targetCenterX + this.currentLookAhead - this.deadzoneLeft;
+      }
+      desiredX = this.clampX(desiredX);
     }
 
-    desiredX = this.clampX(desiredX);
     const followRate = 1 - Math.exp(-9 * dt);
     this.x += (desiredX - this.x) * followRate;
 

@@ -10,6 +10,19 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
   );
 }
 
+export function circleIntersectsRect(
+  cx: number,
+  cy: number,
+  radius: number,
+  rect: Rect
+): boolean {
+  const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.width));
+  const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.height));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return dx * dx + dy * dy < radius * radius;
+}
+
 /**
  * Slightly inset spike hitbox so grazing the outer 2–3px air corner of a triangle
  * feels fair to the player.

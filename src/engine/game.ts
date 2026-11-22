@@ -14,6 +14,7 @@ import { GameLoop } from './loop.ts';
 import { ParticleSystem } from './particles.ts';
 import { SceneRenderer } from './renderer.ts';
 import { Player, type PlayerSnapshot } from '../entities/player.ts';
+import { BossEncounter, type BossSnapshot } from '../entities/boss.ts';
 import { checkHazardCollision } from '../entities/hazards.ts';
 import { checkPortalCollision } from '../entities/portal.ts';
 import { HudController } from '../ui/hud.ts';
@@ -43,6 +44,7 @@ export interface GameDebugHook {
   readonly musicActive: boolean;
   readonly touchControlsVisible: boolean;
   readonly player: PlayerSnapshot;
+  readonly boss: BossSnapshot | null;
   readonly level: {
     readonly id: number;
     readonly name: string;
@@ -60,6 +62,7 @@ export interface GameDebugHook {
   loadLevel: (levelNumber: number) => void;
   startGame: () => void;
   openEditor: (levelNumber?: number) => void;
+  setBossTimeRemaining: (seconds: number) => void;
 }
 
 declare global {
@@ -86,6 +89,7 @@ export class Game {
   private screen: GameScreen = 'title';
   private currentLevelIndex = 0;
   private currentLevel: LevelData;
+  private boss: BossEncounter | null = null;
   private isTestPlay = false;
   private levelTime = 0;
 
@@ -161,6 +165,7 @@ export class Game {
       }
       if (!this.isTestPlay) {
         this.currentLevel = this.store.getByIndex(this.currentLevelIndex);
+        this.initBossForCurrentLevel();
       }
       this.syncHud();
     });
@@ -204,6 +209,13 @@ export class Game {
     this.canvas.width = VIEWPORT_WIDTH * dpr;
     this.canvas.height = VIEWPORT_HEIGHT * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  private initBossForCurrentLevel(): void {
+    this.boss = this.currentLevel.boss
+      ? new BossEncounter(this.currentLevel.boss)
+      : null;
+    this.camera.setLockX(this.boss ? this.boss.getCameraLockX() : null);
   }
 
   startNewRun(startLevelIndex = 0): void {
@@ -259,6 +271,7 @@ export class Game {
 
     this.player.reset(this.currentLevel.spawn);
     this.camera.configure(this.currentLevel.width, this.currentLevel.height);
+    this.initBossForCurrentLevel();
     const center = this.player.getCenter();
     this.camera.snapTo(center.x, center.y, this.player.facing);
 
@@ -289,6 +302,7 @@ export class Game {
 
     this.player.reset(this.currentLevel.spawn);
     this.camera.configure(this.currentLevel.width, this.currentLevel.height);
+    this.initBossForCurrentLevel();
     const center = this.player.getCenter();
     this.camera.snapTo(center.x, center.y, this.player.facing);
   }
@@ -299,9 +313,21 @@ export class Game {
     this.particles.clear();
     this.input.clearEdges();
     this.player.reset(this.currentLevel.spawn);
+    if (this.boss) {
+      this.boss.reset();
+      this.camera.setLockX(this.boss.getCameraLockX());
+    }
     const center = this.player.getCenter();
     this.camera.snapTo(center.x, center.y, this.player.facing);
-    this.hud.updateProgress(this.computeProgressPercent());
+    if (this.boss) {
+      this.hud.updateBossTimer({
+        phase: this.boss.phase,
+        timeRemaining: this.boss.timeRemaining,
+        survivalDuration: this.boss.config.survivalDuration,
+      });
+    } else {
+      this.hud.updateProgress(this.computeProgressPercent());
+    }
   }
 
   private computeProgressPercent(): number {
@@ -419,10 +445,14 @@ export class Game {
       return;
     }
 
+    const activeSolids = this.boss
+      ? [...this.currentLevel.solids, ...this.boss.getActiveDoorSolids()]
+      : this.currentLevel.solids;
+
     this.player.update(
       input,
       dt,
-      this.currentLevel.solids,
+      activeSolids,
       this.particles,
       this.audio
     );
@@ -446,6 +476,17 @@ export class Game {
       return;
     }
 
+    if (this.boss) {
+      this.boss.update(dt, playerRect, this.particles, this.audio, this.camera);
+      this.camera.setLockX(
+        this.boss.getCameraLockX(playerRect.x + playerRect.width * 0.5)
+      );
+      if (this.boss.checkPlayerHit(playerRect)) {
+        this.triggerDeath();
+        return;
+      }
+    }
+
     if (checkPortalCollision(playerRect, this.currentLevel.portal)) {
       this.triggerLevelComplete();
       return;
@@ -453,7 +494,15 @@ export class Game {
 
     const center = this.player.getCenter();
     this.camera.update(center.x, center.y, this.player.facing, dt);
-    this.hud.updateProgress(this.computeProgressPercent());
+    if (this.boss) {
+      this.hud.updateBossTimer({
+        phase: this.boss.phase,
+        timeRemaining: this.boss.timeRemaining,
+        survivalDuration: this.boss.config.survivalDuration,
+      });
+    } else {
+      this.hud.updateProgress(this.computeProgressPercent());
+    }
   }
 
   private render(): void {
@@ -464,7 +513,8 @@ export class Game {
       this.player,
       this.camera,
       this.particles,
-      this.levelTime
+      this.levelTime,
+      this.boss
     );
   }
 
@@ -479,6 +529,13 @@ export class Game {
       progressPercent: this.computeProgressPercent(),
       isTestPlay: this.isTestPlay,
       touchMode: this.touchControls.isTouchMode(),
+      boss: this.boss
+        ? {
+            phase: this.boss.phase,
+            timeRemaining: this.boss.timeRemaining,
+            survivalDuration: this.boss.config.survivalDuration,
+          }
+        : null,
     });
   }
 
@@ -527,6 +584,9 @@ export class Game {
       get player() {
         return game.player.getSnapshot();
       },
+      get boss() {
+        return game.boss ? game.boss.getSnapshot() : null;
+      },
       get level() {
         const lvl = game.currentLevel;
         return {
@@ -549,6 +609,9 @@ export class Game {
         game.openEditor(
           levelNumber !== undefined ? Math.max(0, levelNumber - 1) : undefined
         );
+      },
+      setBossTimeRemaining(seconds: number) {
+        game.boss?.setTimeRemainingForTest(seconds);
       },
     };
 

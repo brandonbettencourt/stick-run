@@ -45,6 +45,47 @@ export interface LevelHint {
   text: string;
 }
 
+export interface BossConfig {
+  /** Boss display name (e.g., "Crimson Titan") */
+  name: string;
+  /** Visual & hitbox scale relative to player (default: 3) */
+  scale: number;
+  /** Fixed horizontal center X of the boss */
+  x: number;
+  /** Floor Y surface the boss stands and lands on */
+  floorY: number;
+  /** Interior room rectangle that bouncing laser balls reflect off */
+  arenaBounds: Rect;
+  /** X coordinate the player must cross to slam the entry door shut and start the fight */
+  triggerX: number;
+  /** Entry blast door rect (starts open, slams shut once fight begins) */
+  entryDoor: Rect;
+  /** Exit blast door rect behind the boss (starts closed, opens when countdown hits 0) */
+  exitDoor: Rect;
+  /** Survival countdown duration in seconds (30 for Boss 1; later bosses increase by 10-15s) */
+  survivalDuration: number;
+  /** Boss upward jump impulse (negative px/s) */
+  jumpVelocity: number;
+  /** Gravity applied to boss (px/s^2) */
+  gravity: number;
+  /** Minimum delay between boss jumps (seconds) */
+  jumpCooldownMin: number;
+  /** Maximum delay between boss jumps (seconds) */
+  jumpCooldownMax: number;
+  /** Time between laser ball throws (seconds) */
+  throwCooldown: number;
+  /** Telegraph charge/wind-up duration before releasing a laser ball (seconds) */
+  windupDuration: number;
+  /** Straight-line laser ball speed (px/s) */
+  ballSpeed: number;
+  /** Laser ball radius (px) */
+  ballRadius: number;
+  /** Number of wall bounces before a laser ball dissipates (e.g., 5) */
+  maxBounces: number;
+  /** Maximum simultaneous laser balls allowed in the room */
+  maxActiveBalls: number;
+}
+
 export interface LevelData {
   id: number;
   name: string;
@@ -58,4 +99,5 @@ export interface LevelData {
   spikes: SpikeData[];
   lasers: LaserData[];
   hints?: LevelHint[];
+  boss?: BossConfig;
 }

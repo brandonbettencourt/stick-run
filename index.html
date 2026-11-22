@@ -23,8 +23,12 @@
               <span id="hud-level-name" class="hud-title">NEON AWAKENING</span>
             </div>
 
-            <!-- Live level progress bar toward checkered flag -->
-            <div class="hud-progress-wrap" aria-label="Course progress">
+            <!-- Live level progress bar / boss countdown -->
+            <div
+              id="hud-progress-wrap"
+              class="hud-progress-wrap"
+              aria-label="Course progress"
+            >
               <div id="hud-progress-track" class="hud-progress-track">
                 <progress
                   id="hud-progress"
@@ -64,6 +68,12 @@
                 <rect x="11.5" y="9.5" width="3.5" height="3" fill="#ffffff" />
               </svg>
               <span id="hud-progress-pct" class="hud-progress-pct">0%</span>
+              <span
+                id="hud-boss-status"
+                class="sr-only"
+                role="status"
+                aria-live="polite"
+              ></span>
             </div>
 
             <div class="hud-group hud-right">
