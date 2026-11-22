@@ -755,7 +755,7 @@ kbd {
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--bg);
+  background: #05070e;
   overflow: hidden;
 }
 

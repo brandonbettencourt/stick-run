@@ -344,4 +344,96 @@ test.describe('Stick Run E2E Playability', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('Level Editor accurately selects, resizes, moves, and deletes built-in default level features even when letterboxed', async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
+    });
+    page.on('pageerror', (err) => {
+      errors.push(`pageerror: ${err.message}`);
+    });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'LEVEL EDITOR' }).click();
+    await expect(page.locator('#editor-overlay')).toBeVisible();
+
+    const canvasBox = await page.locator('#editor-canvas').boundingBox();
+    expect(canvasBox).not.toBeNull();
+    if (!canvasBox) return;
+
+    // Compute exact screen client coordinates for a given 960x540 world point inside the contained canvas
+    const targetAspect = 960 / 540;
+    const elemAspect = canvasBox.width / canvasBox.height;
+    let renderW = canvasBox.width;
+    let renderH = canvasBox.height;
+    let offsetX = 0;
+    let offsetY = 0;
+    if (elemAspect > targetAspect) {
+      renderH = canvasBox.height;
+      renderW = renderH * targetAspect;
+      offsetX = (canvasBox.width - renderW) * 0.5;
+    } else {
+      renderW = canvasBox.width;
+      renderH = renderW / targetAspect;
+      offsetY = (canvasBox.height - renderH) * 0.5;
+    }
+    const worldToClient = (wx: number, wy: number) => ({
+      x: canvasBox.x + offsetX + (wx / 960) * renderW,
+      y: canvasBox.y + offsetY + (wy / 540) * renderH,
+    });
+
+    // 1. Select built-in Level 1 spike { x: 590, y: 420, width: 48, height: 20 }
+    const spikeCenter = worldToClient(614, 430);
+    await page.mouse.click(spikeCenter.x, spikeCenter.y);
+    await expect(page.locator('.ed-insp-title')).toHaveText('Spikes #1');
+
+    // Drag-move the compact 20px-tall spike from its center (not swallowed by resize handles)
+    const spikeDest = worldToClient(514, 430);
+    await page.mouse.move(spikeCenter.x, spikeCenter.y);
+    await page.mouse.down();
+    await page.mouse.move(spikeDest.x, spikeDest.y);
+    await page.mouse.up();
+    const spikeXInput = page.locator('#ed-inspector-body label:has-text("X") input').first();
+    expect(Number(await spikeXInput.inputValue())).toBeLessThan(550);
+
+    // Delete the built-in spike via Delete button
+    await page.locator('#ed-inspector-body').getByRole('button', { name: 'Delete' }).click();
+    await expect(page.locator('.ed-insp-title')).toHaveCount(0);
+
+    // 2. Select built-in default floor { x: 0, y: 440, width: 780, height: 120 } (extends below y=540)
+    const floorPt = worldToClient(200, 490);
+    await page.mouse.click(floorPt.x, floorPt.y);
+    await expect(page.locator('.ed-insp-title')).toHaveText('Platform #1');
+
+    // Grab its bottom resize handle (clamped at y=533) and drag up to y=480 to resize height
+    const bottomHandle = worldToClient(394.5, 533);
+    const resizeTarget = worldToClient(394.5, 480);
+    await page.mouse.move(bottomHandle.x, bottomHandle.y);
+    await page.mouse.down();
+    await page.mouse.move(resizeTarget.x, resizeTarget.y);
+    await page.mouse.up();
+    const floorHeightInput = page
+      .locator('#ed-inspector-body label:has-text("Height") input')
+      .first();
+    expect(Number(await floorHeightInput.inputValue())).toBe(40);
+
+    // 3. Select built-in step platform { x: 340, y: 380, width: 80, height: 60 } and remove with Delete key
+    const stepPt = worldToClient(380, 410);
+    await page.mouse.click(stepPt.x, stepPt.y);
+    await expect(page.locator('.ed-insp-title')).toHaveText('Platform #2');
+    await page.keyboard.press('Delete');
+    await expect(page.locator('.ed-insp-title')).toHaveCount(0);
+
+    // 4. Select built-in hint { x: 90, y: 310, text: "A / D or ARROWS to Run" } and delete it
+    const hintPt = worldToClient(140, 305);
+    await page.mouse.click(hintPt.x, hintPt.y);
+    await expect(page.locator('.ed-insp-title')).toHaveText('Hint Text #1');
+    await page.keyboard.press('Delete');
+    await expect(page.locator('.ed-insp-title')).toHaveCount(0);
+
+    expect(errors).toEqual([]);
+  });
 });

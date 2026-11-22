@@ -460,6 +460,13 @@ export class LevelEditor {
         if (this.deleteSelection()) {
           e.preventDefault();
         }
+      } else if (e.code === 'Escape') {
+        if (this.activeTool !== 'select') {
+          this.setActiveTool('select');
+        } else if (this.selection) {
+          this.selection = null;
+          this.renderInspector();
+        }
       } else if (e.code === 'KeyV') {
         this.setActiveTool('select');
       } else if (e.code === 'KeyB') {
@@ -470,6 +477,12 @@ export class LevelEditor {
         this.setActiveTool('laserStatic');
       } else if (e.code === 'KeyT') {
         this.setActiveTool('laserTimed');
+      } else if (e.code === 'KeyP') {
+        this.setActiveTool('spawn');
+      } else if (e.code === 'KeyG') {
+        this.setActiveTool('portal');
+      } else if (e.code === 'KeyH') {
+        this.setActiveTool('hint');
       } else if (e.code === 'ArrowRight') {
         this.scrollX = Math.min(this.maxScrollX(), this.scrollX + 160);
         this.syncScrollRange();
@@ -779,13 +792,15 @@ export class LevelEditor {
       const orig = snap.solids[sel.index];
       const target = this.draft.solids[sel.index];
       if (!orig || !target) return;
-      target.x = this.snap(Math.max(0, Math.min(this.draft.width - orig.width, orig.x + dx)));
+      const maxX = Math.max(0, this.draft.width - orig.width);
+      target.x = this.snap(Math.max(0, Math.min(maxX, orig.x + dx)));
       target.y = this.snap(Math.max(0, Math.min(VIEWPORT_HEIGHT + 40, orig.y + dy)));
     } else if (sel.kind === 'spike') {
       const orig = snap.spikes[sel.index];
       const target = this.draft.spikes[sel.index];
       if (!orig || !target) return;
-      target.x = this.snap(Math.max(0, Math.min(this.draft.width - orig.width, orig.x + dx)));
+      const maxX = Math.max(0, this.draft.width - orig.width);
+      target.x = this.snap(Math.max(0, Math.min(maxX, orig.x + dx)));
       target.y = this.snap(Math.max(0, Math.min(VIEWPORT_HEIGHT - orig.height, orig.y + dy)));
     } else if (sel.kind === 'laser') {
       const orig = snap.lasers[sel.index];
@@ -868,8 +883,9 @@ export class LevelEditor {
     let right = orig.x + orig.width;
     let bottom = orig.y + orig.height;
 
+    const maxY = sel.kind === 'solid' ? VIEWPORT_HEIGHT + 160 : VIEWPORT_HEIGHT;
     const sx = this.snap(Math.max(0, Math.min(this.draft.width, worldX)));
-    const sy = this.snap(Math.max(0, Math.min(VIEWPORT_HEIGHT + 160, worldY)));
+    const sy = this.snap(Math.max(0, Math.min(maxY, worldY)));
 
     if (handle.includes('w')) left = Math.min(right - minSize, sx);
     if (handle.includes('e')) right = Math.max(left + minSize, sx);
@@ -891,43 +907,129 @@ export class LevelEditor {
     return null;
   }
 
+  private getSelectionVisualBounds(r: Rect): {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    leftVisible: boolean;
+    rightVisible: boolean;
+    topVisible: boolean;
+    bottomVisible: boolean;
+  } {
+    const visMinX = this.scrollX;
+    const visMaxX = this.scrollX + VIEWPORT_WIDTH;
+    const visMinY = 0;
+    const visMaxY = VIEWPORT_HEIGHT;
+    const margin = HANDLE_RADIUS + 1;
+    // Offset handles slightly outward on compact shapes (like 20px spikes) so the interior stays free for drag-moving
+    const pad = r.height < 40 || r.width < 48 ? 5 : 2;
+
+    const leftVisible = r.x >= visMinX - 2 && r.x <= visMaxX + 2;
+    const rightVisible = r.x + r.width >= visMinX - 2 && r.x + r.width <= visMaxX + 2;
+    const topVisible = r.y >= visMinY - 2 && r.y <= visMaxY + 2;
+    // Built-in floor platforms often extend past VIEWPORT_HEIGHT (e.g. y=440, h=120 -> 560);
+    // keep their bottom handles clamped inside the canvas bottom so they remain visible and resizable.
+    const bottomVisible = r.y + r.height >= visMinY - 2;
+
+    const x1 = leftVisible ? Math.max(visMinX + margin, r.x - pad) : visMinX;
+    const x2 = rightVisible ? Math.min(visMaxX - margin, r.x + r.width + pad) : visMaxX;
+    const y1 = topVisible ? Math.max(visMinY + margin, r.y - pad) : visMinY;
+    const y2 = Math.min(visMaxY - margin, r.y + r.height + pad);
+
+    return {
+      x1,
+      y1,
+      x2,
+      y2,
+      leftVisible,
+      rightVisible,
+      topVisible,
+      bottomVisible,
+    };
+  }
+
   private getHandlesForSelection(): Array<{ handle: ResizeHandle; x: number; y: number }> {
     const sel = this.selection;
     if (!sel) return [];
 
+    const visMinX = this.scrollX;
+    const visMaxX = this.scrollX + VIEWPORT_WIDTH;
+    const margin = HANDLE_RADIUS + 1;
+
     if (sel.kind === 'laser') {
       const lz = this.draft.lasers[sel.index];
       if (!lz) return [];
-      return [
-        { handle: 'laserA', x: lz.x1, y: lz.y1 },
-        { handle: 'laserB', x: lz.x2, y: lz.y2 },
-      ];
+      const handles: Array<{ handle: ResizeHandle; x: number; y: number }> = [];
+      if (lz.x1 >= visMinX - 4 && lz.x1 <= visMaxX + 4) {
+        handles.push({
+          handle: 'laserA',
+          x: Math.max(visMinX + margin, Math.min(visMaxX - margin, lz.x1)),
+          y: Math.max(margin, Math.min(VIEWPORT_HEIGHT - margin, lz.y1)),
+        });
+      }
+      if (lz.x2 >= visMinX - 4 && lz.x2 <= visMaxX + 4) {
+        handles.push({
+          handle: 'laserB',
+          x: Math.max(visMinX + margin, Math.min(visMaxX - margin, lz.x2)),
+          y: Math.max(margin, Math.min(VIEWPORT_HEIGHT - margin, lz.y2)),
+        });
+      }
+      return handles;
     }
 
     const r = this.getSelectedRect();
     if (!r) return [];
-    const mx = r.x + r.width * 0.5;
-    const my = r.y + r.height * 0.5;
-    return [
-      { handle: 'nw', x: r.x, y: r.y },
-      { handle: 'n', x: mx, y: r.y },
-      { handle: 'ne', x: r.x + r.width, y: r.y },
-      { handle: 'e', x: r.x + r.width, y: my },
-      { handle: 'se', x: r.x + r.width, y: r.y + r.height },
-      { handle: 's', x: mx, y: r.y + r.height },
-      { handle: 'sw', x: r.x, y: r.y + r.height },
-      { handle: 'w', x: r.x, y: my },
-    ];
+    // Skip if completely scrolled outside the horizontal viewport
+    if (r.x + r.width < visMinX - 4 || r.x > visMaxX + 4) return [];
+
+    const b = this.getSelectionVisualBounds(r);
+    const mx = (b.x1 + b.x2) * 0.5;
+    const my = (b.y1 + b.y2) * 0.5;
+    const handles: Array<{ handle: ResizeHandle; x: number; y: number }> = [];
+
+    if (b.leftVisible && b.topVisible) handles.push({ handle: 'nw', x: b.x1, y: b.y1 });
+    if (b.topVisible) handles.push({ handle: 'n', x: mx, y: b.y1 });
+    if (b.rightVisible && b.topVisible) handles.push({ handle: 'ne', x: b.x2, y: b.y1 });
+    if (b.rightVisible) handles.push({ handle: 'e', x: b.x2, y: my });
+    if (b.rightVisible && b.bottomVisible) handles.push({ handle: 'se', x: b.x2, y: b.y2 });
+    if (b.bottomVisible) handles.push({ handle: 's', x: mx, y: b.y2 });
+    if (b.leftVisible && b.bottomVisible) handles.push({ handle: 'sw', x: b.x1, y: b.y2 });
+    if (b.leftVisible) handles.push({ handle: 'w', x: b.x1, y: my });
+
+    return handles;
   }
 
   private hitTestHandles(worldX: number, worldY: number): ResizeHandle | null {
     const handles = this.getHandlesForSelection();
+    const r = this.getSelectedRect();
+    // Use slightly tighter hit radius on compact shapes so interior clicks reliably drag-move
+    const hitRadius =
+      r && (r.height < 40 || r.width < 48) ? HANDLE_RADIUS + 2 : HANDLE_RADIUS + 4;
+
+    let bestHandle: ResizeHandle | null = null;
+    let bestDist = hitRadius;
     for (const h of handles) {
-      if (Math.hypot(worldX - h.x, worldY - h.y) <= HANDLE_RADIUS + 4) {
-        return h.handle;
+      const dist = Math.hypot(worldX - h.x, worldY - h.y);
+      if (dist <= bestDist) {
+        bestDist = dist;
+        bestHandle = h.handle;
       }
     }
-    return null;
+    return bestHandle;
+  }
+
+  private measureHintBox(h: LevelHint): Rect {
+    this.ctx.save();
+    this.ctx.font = '600 13px ui-monospace, monospace';
+    const textW = this.ctx.measureText(h.text).width;
+    this.ctx.restore();
+    return {
+      x: h.x - 6,
+      y: h.y - 16,
+      width: Math.max(60, textW + 12),
+      height: 24,
+    };
   }
 
   private hitTestEntity(worldX: number, worldY: number): Selection {
@@ -965,9 +1067,9 @@ export class LevelEditor {
     for (let i = this.draft.spikes.length - 1; i >= 0; i--) {
       const s = this.draft.spikes[i];
       if (
-        worldX >= s.x &&
-        worldX <= s.x + s.width &&
-        worldY >= s.y &&
+        worldX >= s.x - 2 &&
+        worldX <= s.x + s.width + 2 &&
+        worldY >= s.y - 2 &&
         worldY <= s.y + s.height
       ) {
         return { kind: 'spike', index: i };
@@ -977,13 +1079,12 @@ export class LevelEditor {
     // 5. Hints
     if (this.draft.hints) {
       for (let i = this.draft.hints.length - 1; i >= 0; i--) {
-        const h = this.draft.hints[i];
-        const approxWidth = Math.max(80, h.text.length * 8.5);
+        const box = this.measureHintBox(this.draft.hints[i]);
         if (
-          worldX >= h.x - 6 &&
-          worldX <= h.x + approxWidth &&
-          worldY >= h.y - 18 &&
-          worldY <= h.y + 8
+          worldX >= box.x &&
+          worldX <= box.x + box.width &&
+          worldY >= box.y &&
+          worldY <= box.y + box.height
         ) {
           return { kind: 'hint', index: i };
         }
@@ -1163,8 +1264,21 @@ export class LevelEditor {
       ctx.strokeRect(s.x + 1, s.y + 1, Math.max(0, s.width - 2), Math.max(0, s.height - 2));
     }
 
-    // Spikes & lasers
+    // Spikes & lasers (draw subtle guide lines for lasers so timed lasers stay visible while blinked off)
     renderSpikes(ctx, this.draft.spikes, this.animTime);
+    if (this.draft.lasers.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.28)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      for (const lz of this.draft.lasers) {
+        ctx.beginPath();
+        ctx.moveTo(lz.x1, lz.y1);
+        ctx.lineTo(lz.x2, lz.y2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     renderLasers(ctx, this.draft.lasers, this.previewLasers ? this.animTime : 0);
 
     // Portal
@@ -1181,6 +1295,13 @@ export class LevelEditor {
       this.renderCreatePreview(ctx, this.drag);
     }
 
+    ctx.restore();
+
+    // Subtle viewport frame so the exact 16:9 editable area is clear
+    ctx.save();
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, VIEWPORT_WIDTH - 1, VIEWPORT_HEIGHT - 1);
     ctx.restore();
   }
 
@@ -1247,12 +1368,13 @@ export class LevelEditor {
         PLAYER_STAND_HEIGHT + 6
       );
     } else if (sel.kind === 'hint' && this.draft.hints?.[sel.index]) {
-      const h = this.draft.hints[sel.index];
-      ctx.strokeRect(h.x - 4, h.y - 16, Math.max(80, h.text.length * 8.5), 22);
+      const box = this.measureHintBox(this.draft.hints[sel.index]);
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
     } else {
       const r = this.getSelectedRect();
       if (r) {
-        ctx.strokeRect(r.x - 2, r.y - 2, r.width + 4, r.height + 4);
+        const b = this.getSelectionVisualBounds(r);
+        ctx.strokeRect(b.x1, b.y1, Math.max(0, b.x2 - b.x1), Math.max(0, b.y2 - b.y1));
       }
     }
 
@@ -1483,6 +1605,14 @@ export class LevelEditor {
 
       actions.append(dupBtn, delBtn);
       this.inspectorBody.append(actions);
+    } else {
+      const note = document.createElement('p');
+      note.className = 'ed-empty';
+      note.textContent =
+        sel.kind === 'spawn'
+          ? 'Required by every level — drag on the canvas or edit X/Y above to reposition.'
+          : 'Required by every level — drag or resize handles to move and resize the exit portal.';
+      this.inspectorBody.append(note);
     }
   }
 
@@ -1645,8 +1775,34 @@ export class LevelEditor {
     worldY: number;
   } {
     const rect = this.canvas.getBoundingClientRect();
-    const screenX = ((e.clientX - rect.left) / rect.width) * VIEWPORT_WIDTH;
-    const screenY = ((e.clientY - rect.top) / rect.height) * VIEWPORT_HEIGHT;
+    const targetAspect = VIEWPORT_WIDTH / VIEWPORT_HEIGHT;
+    const elemAspect = rect.height > 0 ? rect.width / rect.height : targetAspect;
+
+    let renderWidth = rect.width;
+    let renderHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (elemAspect > targetAspect) {
+      // Pillarboxed: empty bars on left and right
+      renderHeight = rect.height;
+      renderWidth = renderHeight * targetAspect;
+      offsetX = (rect.width - renderWidth) * 0.5;
+    } else {
+      // Letterboxed: empty bars on top and bottom
+      renderWidth = rect.width;
+      renderHeight = renderWidth / targetAspect;
+      offsetY = (rect.height - renderHeight) * 0.5;
+    }
+
+    const screenX =
+      renderWidth > 0
+        ? ((e.clientX - rect.left - offsetX) / renderWidth) * VIEWPORT_WIDTH
+        : 0;
+    const screenY =
+      renderHeight > 0
+        ? ((e.clientY - rect.top - offsetY) / renderHeight) * VIEWPORT_HEIGHT
+        : 0;
     return {
       screenX,
       screenY,
