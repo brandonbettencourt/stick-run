@@ -335,8 +335,10 @@ export class LevelEditor {
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      document.body.append(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       this.showToast(`Exported ${filename}`);
     });
 
