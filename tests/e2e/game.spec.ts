@@ -298,9 +298,13 @@ test.describe('Stick Run E2E Playability', () => {
     await page.getByRole('button', { name: 'LEVEL EDITOR' }).click();
     await expect(page.locator('#editor-overlay')).toBeVisible();
 
-    // Start a fresh blank custom level and name it
+    // Start a fresh blank custom level and name it using real keyboard typing (including spaces)
     await page.getByRole('button', { name: '+ NEW BLANK' }).click();
-    await page.locator('#ed-level-name').fill("Gus's Turbo Track");
+    const nameInput = page.locator('#ed-level-name');
+    await nameInput.click();
+    await nameInput.fill('');
+    await nameInput.pressSequentially("Gus's Turbo Track");
+    await expect(nameInput).toHaveValue("Gus's Turbo Track");
 
     // Select Platform tool and drag-create a platform on the editor canvas
     await page.locator('[data-tool="solid"]').click();

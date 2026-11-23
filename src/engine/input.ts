@@ -83,7 +83,27 @@ export class InputManager {
     this.virtualReleasedQueue.clear();
   }
 
+  private isEditableElement(target: EventTarget | null): boolean {
+    const el =
+      (target instanceof HTMLElement ? target : null) ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null);
+    if (!el) return false;
+    const tag = el.tagName;
+    return (
+      tag === 'INPUT' ||
+      tag === 'TEXTAREA' ||
+      tag === 'SELECT' ||
+      el.isContentEditable
+    );
+  }
+
   private handleKeyDown(e: KeyboardEvent): void {
+    if (this.isEditableElement(e.target)) {
+      return;
+    }
+
     if (PREVENT_DEFAULT_CODES.has(e.code)) {
       // Allow Enter/Space on focused buttons inside dialogs
       const activeTag = document.activeElement?.tagName;
